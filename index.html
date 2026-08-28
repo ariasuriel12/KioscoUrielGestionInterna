@@ -209,21 +209,34 @@ async function loadAll(){
       .select('*')
       .order('creado_en', { ascending: false });
 
-    if (error) throw error;
+    if(error) throw error;
 
     products = data || [];
 
-    console.log('Productos cargados:', products);
-
-  } catch (error) {
+  } catch(error) {
     console.error('Error cargando productos:', error);
-    alert('Error al cargar los productos: ' + error.message);
+    alert('Error cargando productos: ' + error.message);
     products = [];
   }
 
-  // Por ahora estos dos siguen vacíos.
+  try {
+    const { data, error } = await supabaseClient
+      .from('ventas')
+      .select('*')
+      .order('creada_en', { ascending: false });
+
+    if(error) throw error;
+
+    sales = data || [];
+
+  } catch(error) {
+    console.error('Error cargando ventas:', error);
+    alert('Error cargando ventas: ' + error.message);
+    sales = [];
+  }
+
+  // Movimientos todavía los dejamos para después
   movements = [];
-  sales = [];
 
   renderAll();
 }
@@ -390,43 +403,148 @@ function renderMovements(){
 
 /* ---------- VENTAS ---------- */
 async function addSale(){
-  const productId = document.getElementById('sProduct').value;
-  const product = products.find(p => p.id === productId);
-  const qty = Number(document.getElementById('sQty').value) || 1;
-  const amount = Number(document.getElementById('sAmount').value);
-  if(!amount || amount <= 0){ alert('Cargá el monto de la venta.'); return; }
-  const pay = document.getElementById('sPay').value;
-  const client = document.getElementById('sClient').value.trim();
-  const attendant = document.getElementById('sAttendant').value;
+  const productId = document.getElementById('sProduct').value || null;
 
-  if(product){
-    product.stock -= qty;
-    await saveProducts();
+  const product = productId
+    ? products.find(p => p.id === productId)
+    : null;
+
+  const qtyInput = document.getElementById('sQty').value;
+  const qty = Number(qtyInput) > 0 ? Number(qtyInput) : 1;
+
+  const amountInput = document.getElementById('sAmount').value;
+  const amount = Number(amountInput) || 0;
+
+  if(amount <= 0){
+    alert('Cargá el monto de la venta.');
+    return;
   }
 
-  sales.unshift({
-    id: uid(), date: nowStr(), productId: productId || null,
-    productName: product ? product.name : 'Venta libre', qty, amount, pay, client: client || '—', attendant
-  });
+  const pay = document.getElementById('sPay').value || 'efectivo';
+
+  const client =
+    document.getElementById('sClient').value.trim() || null;
+
+  const attendant =
+    document.getElementById('sAttendant').value || null;
+
+  // Si hay producto, descontamos stock
+  if(product){
+    if(qty > product.stock){
+      if(!confirm(
+        'La venta supera el stock disponible (' +
+        product.stock +
+        '). ¿Registrar igualmente?'
+      )){
+        return;
+      }
+    }
+
+    const newStock = product.stock - qty;
+
+    const { error: stockError } = await supabaseClient
+      .from('productos')
+      .update({
+        stock: newStock
+      })
+      .eq('id', product.id);
+
+    if(stockError){
+      console.error(stockError);
+      alert('No se pudo actualizar el stock:\n' + stockError.message);
+      return;
+    }
+  }
+
+  // Registrar la venta
+  const { data, error } = await supabaseClient
+    .from('ventas')
+    .insert({
+      producto_id: product ? product.id : null,
+      producto_nombre: product ? product.nombre : 'Venta libre',
+      cantidad: qty,
+      monto: amount,
+      metodo_pago: pay,
+      cliente: client,
+      atendio: attendant
+    })
+    .select()
+    .single();
+
+  if(error){
+    console.error('Error registrando venta:', error);
+    alert('No se pudo registrar la venta:\n' + error.message);
+    return;
+  }
+
+  console.log('Venta registrada:', data);
+
+  // Limpiar formulario
+  document.getElementById('sProduct').value = '';
+  document.getElementById('sQty').value = 1;
   document.getElementById('sAmount').value = '';
   document.getElementById('sClient').value = '';
-  document.getElementById('sQty').value = 1;
-  await saveSales();
-  renderAll();
+
+  await loadAll();
 }
 
 function renderSales(){
   const el = document.getElementById('salesTable');
+
   const filter = document.getElementById('salesFilterPay').value;
-  const list = filter ? sales.filter(s => s.pay === filter) : sales;
-  if(list.length === 0){ el.innerHTML = '<p class="empty">Sin ventas registradas.</p>'; return; }
-  let html = '<table><tr><th>Fecha</th><th>Producto</th><th>Cant.</th><th>Monto</th><th>Pago</th><th>Cliente</th><th>Atendió</th></tr>';
+
+  const list = filter
+    ? sales.filter(s => s.metodo_pago === filter)
+    : sales;
+
+  if(list.length === 0){
+    el.innerHTML = '<p class="empty">Sin ventas registradas.</p>';
+    return;
+  }
+
+  let html = `
+    <table>
+      <tr>
+        <th>Fecha</th>
+        <th>Producto</th>
+        <th>Cant.</th>
+        <th>Monto</th>
+        <th>Pago</th>
+        <th>Cliente</th>
+        <th>Atendió</th>
+      </tr>
+  `;
+
   list.slice(0,150).forEach(s => {
-    html += `<tr><td>${s.date}</td><td>${s.productName}</td><td>${s.qty}</td><td>${money(s.amount)}</td>
-      <td><span class="tag ${s.pay==='mercadopago'?'mp':'ef'}">${s.pay==='mercadopago'?'Mercado Pago':'Efectivo'}</span></td>
-      <td>${s.client}</td><td>${s.attendant}</td></tr>`;
+
+    const fecha = new Date(s.creada_en)
+      .toLocaleString('es-AR', {
+        timeZone: 'America/Argentina/Buenos_Aires'
+      });
+
+    html += `
+      <tr>
+        <td>${fecha}</td>
+        <td>${s.producto_nombre || 'Venta libre'}</td>
+        <td>${s.cantidad || 1}</td>
+        <td>${money(s.monto)}</td>
+
+        <td>
+          <span class="tag ${s.metodo_pago === 'mercadopago' ? 'mp' : 'ef'}">
+            ${s.metodo_pago === 'mercadopago'
+              ? 'Mercado Pago'
+              : 'Efectivo'}
+          </span>
+        </td>
+
+        <td>${s.cliente || '—'}</td>
+        <td>${s.atendio || '—'}</td>
+      </tr>
+    `;
   });
+
   html += '</table>';
+
   el.innerHTML = html;
 }
 
