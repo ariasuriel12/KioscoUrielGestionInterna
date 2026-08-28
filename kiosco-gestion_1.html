@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kiosco Uriel — Gestión interna</title>
+<link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
+<link rel="manifest" href="manifest-gestion.json">
+<meta name="theme-color" content="#0D2B29">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --night:#0D2B29; --night-2:#123834; --cream:#FBF6EC; --cream-2:#F3ECDC;
+    --amber:#F2A93B; --coral:#E4572E; --coral-deep:#7A2712;
+    --ink:#12201F; --ink-soft:#4B5D5A; --line:rgba(18,32,31,0.14);
+    --ok:#2E8B57; --bad:#C0392B;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--cream);color:var(--ink);font-family:'Segoe UI',Roboto,sans-serif;}
+  header{background:var(--night);color:var(--cream);padding:20px 24px;}
+  header h1{margin:0;font-size:22px;}
+  header p{margin:4px 0 0;font-size:13px;color:#B9D2CE;}
+  nav{display:flex;gap:6px;background:var(--night-2);padding:0 20px;overflow-x:auto;}
+  nav button{background:none;border:none;color:#CFE3E0;padding:13px 16px;font-size:14px;cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap;}
+  nav button.active{color:var(--cream);border-bottom-color:var(--amber);font-weight:600;}
+  main{max-width:1080px;margin:0 auto;padding:22px 20px 60px;}
+  .panel{display:none;}
+  .panel.active{display:block;}
+  .card{background:white;border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:16px;}
+  .card h2{margin:0 0 14px;font-size:17px;}
+  .row{display:flex;flex-wrap:wrap;gap:10px;}
+  .row > *{flex:1;min-width:140px;}
+  label{font-size:12px;color:var(--ink-soft);display:block;margin-bottom:4px;}
+  input,select{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;font-size:14px;background:var(--cream-2);}
+  button.btn{background:var(--coral);color:white;border:none;padding:10px 18px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;}
+  button.btn:hover{background:#f0693f;}
+  button.btn.secondary{background:var(--night);}
+  button.btn.ghost{background:transparent;color:var(--coral-deep);border:1px solid var(--line);padding:6px 10px;font-size:13px;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);}
+  th{color:var(--ink-soft);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:0.02em;}
+  .tag{display:inline-block;padding:2px 8px;border-radius:100px;font-size:11px;font-weight:600;}
+  .tag.entrada{background:#E1F0E5;color:var(--ok);}
+  .tag.salida{background:#F8E3E0;color:var(--bad);}
+  .tag.mp{background:#E6F1FB;color:#185FA5;}
+  .tag.ef{background:#FAEEDA;color:#854F0B;}
+  .low{color:var(--bad);font-weight:600;}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px;}
+  .kpi{background:white;border:1px solid var(--line);border-radius:12px;padding:14px 16px;}
+  .kpi span{display:block;font-size:12px;color:var(--ink-soft);}
+  .kpi strong{display:block;font-size:22px;margin-top:4px;}
+  .chart-wrap{position:relative;height:280px;margin-top:6px;}
+  .empty{color:var(--ink-soft);font-size:13px;padding:10px 0;}
+  .filter-row{margin-bottom:14px;}
+  select#chartAttendantFilter, select#salesFilterPay{max-width:220px;}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Kiosco Uriel — Gestión interna</h1>
+  <p>Stock, movimientos, ventas y gráficos. Uso interno del local.</p>
+</header>
+
+<nav>
+  <button data-panel="productos" class="active">Productos</button>
+  <button data-panel="movimientos">Entradas / Salidas</button>
+  <button data-panel="ventas">Ventas</button>
+  <button data-panel="graficos">Gráficos</button>
+</nav>
+
+<main>
+
+  <!-- PRODUCTOS -->
+  <section class="panel active" id="panel-productos">
+    <div class="card">
+      <h2>Nuevo producto</h2>
+      <div class="row">
+        <div><label>Nombre</label><input id="pName" placeholder="Coca-Cola 500ml"></div>
+        <div><label>Categoría</label>
+          <select id="pCat">
+            <option>Bebidas</option><option>Almacén</option><option>Panadería</option>
+            <option>Cigarrillos</option><option>Golosinas y snacks</option><option>Otros</option>
+          </select>
+        </div>
+        <div>
+  <label>Código de barras</label>
+  <input id="pBarcode" placeholder="7791234567890">
+</div>
+
+<div>
+  <label>Código rápido</label>
+  <input id="pQuickCode" placeholder="COCA500">
+</div>
+        <div><label>Stock inicial</label><input id="pStock" type="number" min="0" value="0"></div>
+        <div><label>Stock mínimo</label><input id="pMin" type="number" min="0" value="3"></div>
+        <div><label>Precio de venta</label><input id="pPrice" type="number" min="0" step="0.01" placeholder="0.00"></div>
+      </div>
+      <div style="margin-top:12px;"><button class="btn" onclick="addProduct()">Agregar producto</button></div>
+    </div>
+
+    <div class="card">
+      <h2>Catálogo</h2>
+      <div id="productsTable"><p class="empty">Cargando…</p></div>
+    </div>
+  </section>
+
+  <!-- MOVIMIENTOS -->
+  <section class="panel" id="panel-movimientos">
+    <div class="card">
+      <h2>Registrar entrada o salida</h2>
+      <div class="row">
+        <div><label>Producto</label><select id="mProduct"></select></div>
+        <div><label>Tipo</label>
+          <select id="mType"><option value="entrada">Entrada (compra/reposición)</option><option value="salida">Salida (ajuste, rotura, consumo)</option></select>
+        </div>
+        <div><label>Cantidad</label><input id="mQty" type="number" min="1" value="1"></div>
+        <div><label>Motivo (opcional)</label><input id="mNote" placeholder="Reposición proveedor, rotura, etc."></div>
+      </div>
+      <div style="margin-top:12px;"><button class="btn" onclick="addMovement()">Registrar movimiento</button></div>
+    </div>
+
+    <div class="card">
+      <h2>Historial de movimientos</h2>
+      <div id="movementsTable"><p class="empty">Cargando…</p></div>
+    </div>
+  </section>
+
+  <!-- VENTAS -->
+  <section class="panel" id="panel-ventas">
+    <div class="card">
+      <h2>Registrar venta</h2>
+      <div class="row">
+        <div><label>Producto</label><select id="sProduct"><option value="">— Libre (sin descontar stock) —</option></select></div>
+        <div><label>Cantidad</label><input id="sQty" type="number" min="1" value="1"></div>
+        <div><label>Monto total</label><input id="sAmount" type="number" min="0" step="0.01" placeholder="0.00"></div>
+        <div><label>Método de pago</label>
+          <select id="sPay"><option value="efectivo">Efectivo</option><option value="mercadopago">Mercado Pago</option></select>
+        </div>
+      </div>
+      <div class="row" style="margin-top:10px;">
+        <div><label>Cliente (opcional)</label><input id="sClient" placeholder="Nombre o 'ocasional'"></div>
+        <div><label>Atendió</label>
+          <select id="sAttendant"><option>Vos</option><option>Mamá</option><option>Papá</option></select>
+        </div>
+      </div>
+      <div style="margin-top:12px;"><button class="btn" onclick="addSale()">Registrar venta</button></div>
+    </div>
+
+    <div class="card">
+      <h2>Ventas registradas</h2>
+      <div class="filter-row row">
+        <div><label>Filtrar por método de pago</label>
+          <select id="salesFilterPay" onchange="renderSales()">
+            <option value="">Todos</option><option value="efectivo">Efectivo</option><option value="mercadopago">Mercado Pago</option>
+          </select>
+        </div>
+      </div>
+      <div id="salesTable"><p class="empty">Cargando…</p></div>
+    </div>
+  </section>
+
+  <!-- GRAFICOS -->
+  <section class="panel" id="panel-graficos">
+    <div class="kpis" id="kpiRow"></div>
+
+    <div class="card">
+      <h2>Ventas por día (últimos 30 días)</h2>
+      <div class="chart-wrap"><canvas id="chartDaily"></canvas></div>
+    </div>
+
+    <div class="row">
+      <div class="card" style="flex:1;">
+        <h2>Ventas por método de pago</h2>
+        <div class="chart-wrap"><canvas id="chartPayment"></canvas></div>
+      </div>
+      <div class="card" style="flex:1;">
+        <h2>Ventas por quién atendió</h2>
+        <div class="chart-wrap"><canvas id="chartAttendant"></canvas></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Productos más vendidos (por cantidad)</h2>
+      <div class="chart-wrap"><canvas id="chartTopProducts"></canvas></div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  const SUPABASE_URL = 'https://gzgqivfmuqhwwiyeduqj.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_WBO9vc_meB6RfMiS97VIfQ_uiKzUHSY no veo la project url detallame';
+
+const supabase = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_KEY
+);
+let products = [];
+let movements = [];
+let sales = [];
+let charts = {};
+
+async function loadAll(){
+  try {
+    const { data, error } = await supabase
+      .from('productos')
+      .select('*')
+      .order('creado_en', { ascending: false });
+
+    if (error) throw error;
+
+    products = data || [];
+
+    console.log('Productos cargados:', products);
+
+  } catch (error) {
+    console.error('Error cargando productos:', error);
+    alert('Error al cargar los productos: ' + error.message);
+    products = [];
+  }
+
+  // Por ahora estos dos siguen vacíos.
+  movements = [];
+  sales = [];
+
+  renderAll();
+}
+
+async function saveProducts(){ await window.storage.set('products', JSON.stringify(products), true); }
+async function saveMovements(){ await window.storage.set('movements', JSON.stringify(movements), true); }
+async function saveSales(){ await window.storage.set('sales', JSON.stringify(sales), true); }
+
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function money(n){ return '$' + Number(n||0).toLocaleString('es-AR',{minimumFractionDigits:2, maximumFractionDigits:2}); }
+function nowStr(){ return new Date().toLocaleString('es-AR', { timeZone:'America/Argentina/Buenos_Aires' }); }
+
+/* ---------- PRODUCTOS ---------- */
+async function addProduct(){
+  const name = document.getElementById('pName').value.trim();
+
+  if(!name){
+    alert('Poné un nombre de producto.');
+    return;
+  }
+
+  const cat = document.getElementById('pCat').value;
+  const barcode = document.getElementById('pBarcode').value.trim() || null;
+const quickCode = document.getElementById('pQuickCode').value.trim() || null;
+  const stock = Number(document.getElementById('pStock').value) || 0;
+  const min = Number(document.getElementById('pMin').value) || 0;
+  const price = Number(document.getElementById('pPrice').value) || 0;
+
+const { data, error } = await supabase
+  .from('productos')
+  .insert({
+    nombre: name,
+    categoria: cat,
+    codigo_barras: barcode,
+    codigo_rapido: quickCode,
+    stock: stock,
+    stock_minimo: min,
+    precio: price
+  })
+  .select()
+  .single();
+
+  if(error){
+    console.error('Error agregando producto:', error);
+    alert('No se pudo agregar el producto:\n' + error.message);
+    return;
+  }
+
+  console.log('Producto agregado:', data);
+
+document.getElementById('pName').value = '';
+document.getElementById('pBarcode').value = '';
+document.getElementById('pQuickCode').value = '';
+document.getElementById('pStock').value = 0;
+document.getElementById('pPrice').value = '';
+
+  // Volvemos a consultar Supabase
+  await loadAll();
+}
+async function deleteProduct(id){
+  if(!confirm('¿Eliminar este producto del catálogo?')) return;
+
+  const { error } = await supabase
+    .from('productos')
+    .delete()
+    .eq('id', id);
+
+  if(error){
+    console.error('Error eliminando producto:', error);
+    alert('No se pudo eliminar el producto:\n' + error.message);
+    return;
+  }
+
+  await loadAll();
+}
+
+function renderProducts(){
+  const el = document.getElementById('productsTable');
+
+  if(products.length === 0){
+    el.innerHTML = '<p class="empty">Todavía no cargaste productos.</p>';
+    return;
+  }
+
+  let html = `
+    <table>
+      <tr>
+        <th>Producto</th>
+        <th>Categoría</th>
+        <th>Stock</th>
+        <th>Mínimo</th>
+        <th>Precio</th>
+        <th></th>
+      </tr>
+  `;
+
+  products.forEach(p => {
+    const low = p.stock <= p.stock_minimo;
+
+    html += `
+      <tr>
+        <td>${p.nombre}</td>
+        <td>${p.categoria}</td>
+        <td class="${low ? 'low' : ''}">
+          ${p.stock}${low ? ' ⚠' : ''}
+        </td>
+        <td>${p.stock_minimo}</td>
+        <td>${money(p.precio)}</td>
+        <td>
+          <button class="btn ghost" onclick="deleteProduct('${p.id}')">
+            Eliminar
+          </button>
+        </td>
+      </tr>
+    `;
+  });
+
+  html += '</table>';
+
+  el.innerHTML = html;
+}
+
+function refreshProductSelects(){
+  const sel1 = document.getElementById('mProduct');
+  const sel2 = document.getElementById('sProduct');
+  sel1.innerHTML = products.map(p => `<option value="${p.id}">${p.name} (stock: ${p.stock})</option>`).join('');
+  sel2.innerHTML = '<option value="">— Libre (sin descontar stock) —</option>' +
+    products.map(p => `<option value="${p.id}">${p.name} — ${money(p.price)}</option>`).join('');
+}
+
+/* ---------- MOVIMIENTOS ---------- */
+async function addMovement(){
+  const productId = document.getElementById('mProduct').value;
+  const product = products.find(p => p.id === productId);
+  if(!product){ alert('Cargá al menos un producto primero.'); return; }
+  const type = document.getElementById('mType').value;
+  const qty = Number(document.getElementById('mQty').value) || 0;
+  if(qty <= 0){ alert('La cantidad tiene que ser mayor a 0.'); return; }
+  const note = document.getElementById('mNote').value.trim();
+
+  if(type === 'salida' && qty > product.stock){
+    if(!confirm('La salida es mayor al stock actual (' + product.stock + '). ¿Registrar igual?')) return;
+  }
+
+  product.stock += (type === 'entrada' ? qty : -qty);
+  movements.unshift({ id: uid(), productId, productName: product.name, type, qty, note, date: nowStr() });
+  document.getElementById('mQty').value = 1;
+  document.getElementById('mNote').value = '';
+  await saveProducts();
+  await saveMovements();
+  renderAll();
+}
+
+function renderMovements(){
+  const el = document.getElementById('movementsTable');
+  if(movements.length === 0){ el.innerHTML = '<p class="empty">Sin movimientos todavía.</p>'; return; }
+  let html = '<table><tr><th>Fecha</th><th>Producto</th><th>Tipo</th><th>Cantidad</th><th>Motivo</th></tr>';
+  movements.slice(0,100).forEach(m => {
+    html += `<tr><td>${m.date}</td><td>${m.productName}</td><td><span class="tag ${m.type}">${m.type}</span></td><td>${m.qty}</td><td>${m.note||'—'}</td></tr>`;
+  });
+  html += '</table>';
+  el.innerHTML = html;
+}
+
+/* ---------- VENTAS ---------- */
+async function addSale(){
+  const productId = document.getElementById('sProduct').value;
+  const product = products.find(p => p.id === productId);
+  const qty = Number(document.getElementById('sQty').value) || 1;
+  const amount = Number(document.getElementById('sAmount').value);
+  if(!amount || amount <= 0){ alert('Cargá el monto de la venta.'); return; }
+  const pay = document.getElementById('sPay').value;
+  const client = document.getElementById('sClient').value.trim();
+  const attendant = document.getElementById('sAttendant').value;
+
+  if(product){
+    product.stock -= qty;
+    await saveProducts();
+  }
+
+  sales.unshift({
+    id: uid(), date: nowStr(), productId: productId || null,
+    productName: product ? product.name : 'Venta libre', qty, amount, pay, client: client || '—', attendant
+  });
+  document.getElementById('sAmount').value = '';
+  document.getElementById('sClient').value = '';
+  document.getElementById('sQty').value = 1;
+  await saveSales();
+  renderAll();
+}
+
+function renderSales(){
+  const el = document.getElementById('salesTable');
+  const filter = document.getElementById('salesFilterPay').value;
+  const list = filter ? sales.filter(s => s.pay === filter) : sales;
+  if(list.length === 0){ el.innerHTML = '<p class="empty">Sin ventas registradas.</p>'; return; }
+  let html = '<table><tr><th>Fecha</th><th>Producto</th><th>Cant.</th><th>Monto</th><th>Pago</th><th>Cliente</th><th>Atendió</th></tr>';
+  list.slice(0,150).forEach(s => {
+    html += `<tr><td>${s.date}</td><td>${s.productName}</td><td>${s.qty}</td><td>${money(s.amount)}</td>
+      <td><span class="tag ${s.pay==='mercadopago'?'mp':'ef'}">${s.pay==='mercadopago'?'Mercado Pago':'Efectivo'}</span></td>
+      <td>${s.client}</td><td>${s.attendant}</td></tr>`;
+  });
+  html += '</table>';
+  el.innerHTML = html;
+}
+
+/* ---------- GRAFICOS ---------- */
+function renderKpis(){
+  const totalVentas = sales.reduce((a,s)=>a+Number(s.amount),0);
+  const hoy = new Date().toLocaleDateString('es-AR', {timeZone:'America/Argentina/Buenos_Aires'});
+  const ventasHoy = sales.filter(s => s.date.startsWith(hoy)).reduce((a,s)=>a+Number(s.amount),0);
+  const lowStock = products.filter(p => p.stock <= p.min).length;
+  const el = document.getElementById('kpiRow');
+  el.innerHTML = `
+    <div class="kpi"><span>Ventas totales registradas</span><strong>${money(totalVentas)}</strong></div>
+    <div class="kpi"><span>Ventas de hoy</span><strong>${money(ventasHoy)}</strong></div>
+    <div class="kpi"><span>Cantidad de ventas</span><strong>${sales.length}</strong></div>
+    <div class="kpi"><span>Productos con stock bajo</span><strong class="${lowStock>0?'low':''}">${lowStock}</strong></div>
+  `;
+}
+
+function destroyChart(key){ if(charts[key]){ charts[key].destroy(); delete charts[key]; } }
+
+function renderCharts(){
+  // Ventas por día, últimos 30 días
+  const days = [];
+  const now = new Date();
+  for(let i=29;i>=0;i--){
+    const d = new Date(now); d.setDate(now.getDate()-i);
+    days.push(d.toLocaleDateString('es-AR', {timeZone:'America/Argentina/Buenos_Aires'}));
+  }
+  const dailyTotals = days.map(day => sales.filter(s=>s.date.startsWith(day)).reduce((a,s)=>a+Number(s.amount),0));
+  destroyChart('daily');
+  charts.daily = new Chart(document.getElementById('chartDaily'), {
+    type:'bar',
+    data:{ labels: days.map(d=>d.slice(0,5)), datasets:[{ label:'Ventas ($)', data:dailyTotals, backgroundColor:'#E4572E' }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}} }
+  });
+
+  // Por método de pago
+  const efectivo = sales.filter(s=>s.pay==='efectivo').reduce((a,s)=>a+Number(s.amount),0);
+  const mp = sales.filter(s=>s.pay==='mercadopago').reduce((a,s)=>a+Number(s.amount),0);
+  destroyChart('payment');
+  charts.payment = new Chart(document.getElementById('chartPayment'), {
+    type:'doughnut',
+    data:{ labels:['Efectivo','Mercado Pago'], datasets:[{ data:[efectivo, mp], backgroundColor:['#F2A93B','#185FA5'] }] },
+    options:{ responsive:true, maintainAspectRatio:false }
+  });
+
+  // Por atendió
+  const attendants = ['Vos','Mamá','Papá'];
+  const attTotals = attendants.map(a => sales.filter(s=>s.attendant===a).reduce((acc,s)=>acc+Number(s.amount),0));
+  destroyChart('attendant');
+  charts.attendant = new Chart(document.getElementById('chartAttendant'), {
+    type:'bar',
+    data:{ labels:attendants, datasets:[{ label:'Ventas ($)', data:attTotals, backgroundColor:'#0D2B29' }] },
+    options:{ responsive:true, maintainAspectRatio:false, indexAxis:'y', plugins:{legend:{display:false}} }
+  });
+
+  // Top productos
+  const qtyByProduct = {};
+  sales.forEach(s => { if(s.productName){ qtyByProduct[s.productName] = (qtyByProduct[s.productName]||0) + Number(s.qty); } });
+  const topEntries = Object.entries(qtyByProduct).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  destroyChart('top');
+  charts.top = new Chart(document.getElementById('chartTopProducts'), {
+    type:'bar',
+    data:{ labels: topEntries.map(e=>e[0]), datasets:[{ label:'Unidades vendidas', data: topEntries.map(e=>e[1]), backgroundColor:'#8A5A0F' }] },
+    options:{ responsive:true, maintainAspectRatio:false, indexAxis:'y', plugins:{legend:{display:false}} }
+  });
+}
+
+function renderAll(){
+  renderProducts();
+  refreshProductSelects();
+  renderMovements();
+  renderSales();
+  renderKpis();
+  renderCharts();
+}
+
+/* ---------- NAV ---------- */
+document.querySelectorAll('nav button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('panel-' + btn.dataset.panel).classList.add('active');
+    if(btn.dataset.panel === 'graficos'){ renderKpis(); renderCharts(); }
+  });
+});
+
+loadAll();
+</script>
+
+</body>
+</html>
