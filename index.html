@@ -191,9 +191,9 @@
 
 <script>
   const SUPABASE_URL = 'https://gzgqivfmuqhwwiyeduqj.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_WBO9vc_meB6RfMiS97VIfQ_uiKzUHSY no veo la project url detallame';
+  const SUPABASE_KEY = 'sb_publishable_WBO9vc_meB6RfMiS97VIfQ_uiKzUHSY no veo la project url detallame';
 
-const supabase = window.supabase.createClient(
+const supabaseClient = window.supabase.createClient(
   SUPABASE_URL,
   SUPABASE_KEY
 );
@@ -204,7 +204,7 @@ let charts = {};
 
 async function loadAll(){
   try {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseClient
       .from('productos')
       .select('*')
       .order('creado_en', { ascending: false });
@@ -252,7 +252,7 @@ const quickCode = document.getElementById('pQuickCode').value.trim() || null;
   const min = Number(document.getElementById('pMin').value) || 0;
   const price = Number(document.getElementById('pPrice').value) || 0;
 
-const { data, error } = await supabase
+const { data, error } = await supabaseClient
   .from('productos')
   .insert({
     nombre: name,
@@ -286,7 +286,7 @@ document.getElementById('pPrice').value = '';
 async function deleteProduct(id){
   if(!confirm('¿Eliminar este producto del catálogo?')) return;
 
-  const { error } = await supabase
+  const { error } = await supabaseClient
     .from('productos')
     .delete()
     .eq('id', id);
