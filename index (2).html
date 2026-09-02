@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kiosco Uriel — Gestión interna</title>
+<link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
+<link rel="manifest" href="manifest-gestion.json">
+<meta name="theme-color" content="#0D2B29">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<style>
+  :root{
+    --night:#0D2B29; --night-2:#123834; --cream:#FBF6EC; --cream-2:#F3ECDC;
+    --amber:#F2A93B; --coral:#E4572E; --coral-deep:#7A2712;
+    --ink:#12201F; --ink-soft:#4B5D5A; --line:rgba(18,32,31,0.14);
+    --ok:#2E8B57; --bad:#C0392B;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--cream);color:var(--ink);font-family:'Segoe UI',Roboto,sans-serif;}
+  header{background:var(--night);color:var(--cream);padding:20px 24px;}
+  header h1{margin:0;font-size:22px;}
+  header p{margin:4px 0 0;font-size:13px;color:#B9D2CE;}
+  nav{display:flex;gap:6px;background:var(--night-2);padding:0 20px;overflow-x:auto;}
+  nav button{background:none;border:none;color:#CFE3E0;padding:13px 16px;font-size:14px;cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap;}
+  nav button.active{color:var(--cream);border-bottom-color:var(--amber);font-weight:600;}
+  main{max-width:1080px;margin:0 auto;padding:22px 20px 60px;}
+  .panel{display:none;}
+  .panel.active{display:block;}
+  .card{background:white;border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:16px;}
+  .card h2{margin:0 0 14px;font-size:17px;}
+  .row{display:flex;flex-wrap:wrap;gap:10px;}
+  .row > *{flex:1;min-width:140px;}
+  label{font-size:12px;color:var(--ink-soft);display:block;margin-bottom:4px;}
+  input,select{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;font-size:14px;background:var(--cream-2);}
+  button.btn{background:var(--coral);color:white;border:none;padding:10px 18px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;}
+  button.btn:hover{background:#f0693f;}
+  button.btn.secondary{background:var(--night);}
+  button.btn.voice{background:var(--night);}
+  button.btn.ghost{background:transparent;color:var(--coral-deep);border:1px solid var(--line);padding:6px 10px;font-size:13px;margin-right:4px;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);}
+  th{color:var(--ink-soft);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:0.02em;}
+  .tag{display:inline-block;padding:2px 8px;border-radius:100px;font-size:11px;font-weight:600;}
+  .tag.entrada{background:#E1F0E5;color:var(--ok);}
+  .tag.salida{background:#F8E3E0;color:var(--bad);}
+  .tag.mp{background:#E6F1FB;color:#185FA5;}
+  .tag.ef{background:#FAEEDA;color:#854F0B;}
+  .low{color:var(--bad);font-weight:600;}
+  .missing{font-size:11px;color:var(--bad);}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px;}
+  .kpi{background:white;border:1px solid var(--line);border-radius:12px;padding:14px 16px;}
+  .kpi span{display:block;font-size:12px;color:var(--ink-soft);}
+  .kpi strong{display:block;font-size:22px;margin-top:4px;}
+  .chart-wrap{position:relative;height:280px;margin-top:6px;}
+  .empty{color:var(--ink-soft);font-size:13px;padding:10px 0;}
+  .filter-row{margin-bottom:14px;align-items:end;}
+  .checkbox-field{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-soft);padding-bottom:9px;}
+  .checkbox-field input{width:auto;}
+  select#salesFilterPay{max-width:220px;}
+  .scan-box{background:var(--cream-2);border:1px dashed var(--brass,var(--line));border-radius:10px;padding:14px;margin-bottom:14px;}
+  .edit-row td{background:var(--cream-2);}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Kiosco Uriel — Gestión interna</h1>
+  <p>Stock, movimientos, ventas y gráficos. Uso interno del local.</p>
+</header>
+
+<nav>
+  <button data-panel="productos" class="active">Productos</button>
+  <button data-panel="movimientos">Entradas / Salidas</button>
+  <button data-panel="ventas">Ventas</button>
+  <button data-panel="graficos">Gráficos</button>
+</nav>
+
+<main>
+
+  <!-- PRODUCTOS -->
+  <section class="panel active" id="panel-productos">
+    <div class="card">
+      <h2>Nuevo producto</h2>
+      <div class="row">
+        <div><label>Nombre</label><input id="pName" placeholder="Coca-Cola 500ml"></div>
+        <div><label>Categoría</label>
+          <select id="pCat">
+            <option>Bebidas</option><option>Almacén</option><option>Panadería</option>
+            <option>Cigarrillos</option><option>Golosinas y snacks</option><option>Otros</option>
+          </select>
+        </div>
+        <div><label>Código de barras</label><input id="pBarcode" placeholder="7791234567890"></div>
+        <div><label>Código rápido</label><input id="pQuickCode" placeholder="COCA500"></div>
+        <div><label>Stock inicial</label><input id="pStock" type="number" min="0" value="0"></div>
+        <div><label>Stock mínimo</label><input id="pMin" type="number" min="0" value="3"></div>
+        <div><label>Precio de venta</label><input id="pPrice" type="number" min="0" step="0.01" placeholder="0.00"></div>
+      </div>
+      <div style="margin-top:12px;"><button class="btn" onclick="addProduct()">Agregar producto</button></div>
+    </div>
+
+    <div class="card">
+      <h2>Catálogo</h2>
+      <div class="filter-row row">
+        <div>
+          <label>Filtrar por categoría</label>
+          <select id="productFilterCat" onchange="renderProducts()">
+            <option value="">Todas</option>
+            <option>Bebidas</option><option>Almacén</option><option>Panadería</option>
+            <option>Cigarrillos</option><option>Golosinas y snacks</option><option>Otros</option>
+          </select>
+        </div>
+        <div class="checkbox-field">
+          <input type="checkbox" id="productFilterNoCode" onchange="renderProducts()">
+          <label style="margin:0;">Solo sin código</label>
+        </div>
+      </div>
+      <div id="productsTable"><p class="empty">Cargando…</p></div>
+    </div>
+  </section>
+
+  <!-- MOVIMIENTOS -->
+  <section class="panel" id="panel-movimientos">
+    <div class="card">
+      <h2>Registrar entrada o salida</h2>
+      <p class="empty">Esta sección todavía no está conectada a la base de datos — la conectamos en el próximo paso, por ahora se enfocamos en productos y ventas.</p>
+    </div>
+  </section>
+
+  <!-- VENTAS -->
+  <section class="panel" id="panel-ventas">
+    <div class="card">
+      <h2>Registrar venta</h2>
+
+      <div class="scan-box">
+        <label>Escanear o tipear código (lector de código de barras) + Enter</label>
+        <input id="saleBarcode" placeholder="Esperando escaneo…" autocomplete="off">
+      </div>
+
+      <div class="row">
+        <div><label>Producto</label><select id="sProduct" onchange="updateSaleAmount()"><option value="">— Libre (sin descontar stock) —</option></select></div>
+        <div><label>Cantidad</label><input id="sQty" type="number" min="1" value="1" oninput="updateSaleAmount()"></div>
+        <div><label>Monto total</label><input id="sAmount" type="number" min="0" step="0.01" placeholder="0.00"></div>
+        <div><label>Método de pago</label>
+          <select id="sPay"><option value="efectivo">Efectivo</option><option value="mercadopago">Mercado Pago</option></select>
+        </div>
+      </div>
+      <div class="row" style="margin-top:10px;">
+        <div><label>Cliente (opcional)</label><input id="sClient" placeholder="Nombre o 'ocasional'"></div>
+        <div><label>Atendió</label>
+          <select id="sAttendant"><option>Vos</option><option>Mamá</option><option>Papá</option></select>
+        </div>
+      </div>
+      <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn" onclick="addSale()">Registrar venta</button>
+        <button class="btn voice" id="voiceBtn" onclick="startVoiceSale()">🎤 Dictar venta</button>
+      </div>
+      <p class="empty" style="margin-top:8px;">Dictado por voz: funciona en Chrome/Edge. Decí algo como "dos coca colas" y completa producto y cantidad — revisá antes de registrar.</p>
+    </div>
+
+    <div class="card">
+      <h2>Ventas registradas</h2>
+      <div class="filter-row row">
+        <div><label>Filtrar por método de pago</label>
+          <select id="salesFilterPay" onchange="renderSales()">
+            <option value="">Todos</option><option value="efectivo">Efectivo</option><option value="mercadopago">Mercado Pago</option>
+          </select>
+        </div>
+      </div>
+      <div id="salesTable"><p class="empty">Cargando…</p></div>
+    </div>
+  </section>
+
+  <!-- GRAFICOS -->
+  <section class="panel" id="panel-graficos">
+    <div class="kpis" id="kpiRow"></div>
+
+    <div class="card">
+      <h2>Ventas por día (últimos 30 días)</h2>
+      <div class="chart-wrap"><canvas id="chartDaily"></canvas></div>
+    </div>
+
+    <div class="row">
+      <div class="card" style="flex:1;">
+        <h2>Ventas por método de pago</h2>
+        <div class="chart-wrap"><canvas id="chartPayment"></canvas></div>
+      </div>
+      <div class="card" style="flex:1;">
+        <h2>Ventas por quién atendió</h2>
+        <div class="chart-wrap"><canvas id="chartAttendant"></canvas></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Productos más vendidos (por cantidad)</h2>
+      <div class="chart-wrap"><canvas id="chartTopProducts"></canvas></div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  const SUPABASE_URL = 'https://gzgqivfmuqhwwiyeduqj.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_WBO9vc_meB6RfMiS97VIfQ_uiKzUHSY';
+  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  const CATS = ['Bebidas','Almacén','Panadería','Cigarrillos','Golosinas y snacks','Otros'];
+
+  let products = [];
+  let movements = [];
+  let sales = [];
+  let charts = {};
+  let editingProductId = null;
+
+  async function loadAll(){
+    try {
+      const { data, error } = await supabaseClient.from('productos').select('*').order('creado_en', { ascending: false });
+      if(error) throw error;
+      products = data || [];
+    } catch(error){
+      console.error('Error cargando productos:', error);
+      products = [];
+    }
+
+    try {
+      const { data, error } = await supabaseClient.from('ventas').select('*').order('creada_en', { ascending: false });
+      if(error) throw error;
+      sales = data || [];
+    } catch(error){
+      console.error('Error cargando ventas:', error);
+      sales = [];
+    }
+
+    movements = [];
+    renderAll();
+  }
+
+  function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+  function money(n){ return '$' + Number(n||0).toLocaleString('es-AR',{minimumFractionDigits:2, maximumFractionDigits:2}); }
+  function catOptions(selected){
+    return CATS.map(c => `<option ${c===selected?'selected':''}>${c}</option>`).join('');
+  }
+
+  /* ---------- PRODUCTOS ---------- */
+  async function addProduct(){
+    const name = document.getElementById('pName').value.trim();
+    if(!name){ alert('Poné un nombre de producto.'); return; }
+    const cat = document.getElementById('pCat').value;
+    const barcode = document.getElementById('pBarcode').value.trim() || null;
+    const quickCode = document.getElementById('pQuickCode').value.trim() || null;
+    const stock = Number(document.getElementById('pStock').value) || 0;
+    const min = Number(document.getElementById('pMin').value) || 0;
+    const price = Number(document.getElementById('pPrice').value) || 0;
+
+    const { data, error } = await supabaseClient.from('productos').insert({
+      nombre: name, categoria: cat, codigo_barras: barcode, codigo_rapido: quickCode,
+      stock: stock, stock_minimo: min, precio: price
+    }).select().single();
+
+    if(error){ alert('No se pudo agregar el producto:\n' + error.message); return; }
+
+    document.getElementById('pName').value = '';
+    document.getElementById('pBarcode').value = '';
+    document.getElementById('pQuickCode').value = '';
+    document.getElementById('pStock').value = 0;
+    document.getElementById('pPrice').value = '';
+    await loadAll();
+  }
+
+  async function deleteProduct(id){
+    if(!confirm('¿Eliminar este producto del catálogo?')) return;
+    const { error } = await supabaseClient.from('productos').delete().eq('id', id);
+    if(error){ alert('No se pudo eliminar el producto:\n' + error.message); return; }
+    await loadAll();
+  }
+
+  function editProduct(id){ editingProductId = id; renderProducts(); }
+  function cancelEdit(){ editingProductId = null; renderProducts(); }
+
+  async function saveProductEdit(id){
+    const nombre = document.getElementById('edit-nombre-'+id).value.trim();
+    const categoria = document.getElementById('edit-categoria-'+id).value;
+    const codigo_barras = document.getElementById('edit-barras-'+id).value.trim() || null;
+    const codigo_rapido = document.getElementById('edit-rapido-'+id).value.trim() || null;
+    const stock = Number(document.getElementById('edit-stock-'+id).value) || 0;
+    const stock_minimo = Number(document.getElementById('edit-min-'+id).value) || 0;
+    const precio = Number(document.getElementById('edit-precio-'+id).value) || 0;
+
+    const { error } = await supabaseClient.from('productos').update({
+      nombre, categoria, codigo_barras, codigo_rapido, stock, stock_minimo, precio
+    }).eq('id', id);
+
+    if(error){ alert('No se pudo guardar:\n' + error.message); return; }
+    editingProductId = null;
+    await loadAll();
+  }
+
+  function renderProducts(){
+    const el = document.getElementById('productsTable');
+    const catFilter = document.getElementById('productFilterCat').value;
+    const noCodeOnly = document.getElementById('productFilterNoCode').checked;
+
+    let list = products;
+    if(catFilter) list = list.filter(p => p.categoria === catFilter);
+    if(noCodeOnly) list = list.filter(p => !p.codigo_barras && !p.codigo_rapido);
+
+    if(list.length === 0){ el.innerHTML = '<p class="empty">No hay productos que coincidan con el filtro.</p>'; return; }
+
+    let html = '<table><tr><th>Producto</th><th>Categoría</th><th>Stock</th><th>Mínimo</th><th>Precio</th><th></th></tr>';
+
+    list.forEach(p => {
+      if(p.id === editingProductId){
+        html += `<tr class="edit-row">
+          <td><input id="edit-nombre-${p.id}" value="${p.nombre}"></td>
+          <td><select id="edit-categoria-${p.id}">${catOptions(p.categoria)}</select></td>
+          <td><input id="edit-stock-${p.id}" type="number" value="${p.stock}"></td>
+          <td><input id="edit-min-${p.id}" type="number" value="${p.stock_minimo}"></td>
+          <td><input id="edit-precio-${p.id}" type="number" step="0.01" value="${p.precio}"></td>
+          <td>
+            <button class="btn ghost" onclick="saveProductEdit('${p.id}')">Guardar</button>
+            <button class="btn ghost" onclick="cancelEdit()">Cancelar</button>
+          </td>
+        </tr>
+        <tr class="edit-row">
+          <td colspan="6">
+            <div class="row" style="margin-top:0;">
+              <div><label style="font-size:11px;">Código de barras</label><input id="edit-barras-${p.id}" value="${p.codigo_barras||''}"></div>
+              <div><label style="font-size:11px;">Código rápido</label><input id="edit-rapido-${p.id}" value="${p.codigo_rapido||''}"></div>
+            </div>
+          </td>
+        </tr>`;
+      } else {
+        const low = p.stock <= p.stock_minimo;
+        const missing = !p.codigo_barras && !p.codigo_rapido;
+        html += `<tr>
+          <td>${p.nombre}${missing ? ' <span class="missing">(sin código)</span>' : ''}</td>
+          <td>${p.categoria || '—'}</td>
+          <td class="${low?'low':''}">${p.stock}${low?' ⚠':''}</td>
+          <td>${p.stock_minimo}</td>
+          <td>${money(p.precio)}</td>
+          <td>
+            <button class="btn ghost" onclick="editProduct('${p.id}')">Editar</button>
+            <button class="btn ghost" onclick="deleteProduct('${p.id}')">Eliminar</button>
+          </td>
+        </tr>`;
+      }
+    });
+
+    html += '</table>';
+    el.innerHTML = html;
+  }
+
+  function refreshProductSelects(){
+    const sel = document.getElementById('sProduct');
+    const current = sel.value;
+    sel.innerHTML = '<option value="">— Libre (sin descontar stock) —</option>' +
+      products.map(p => `<option value="${p.id}">${p.nombre} — ${money(p.precio)} (stock: ${p.stock})</option>`).join('');
+    if(current) sel.value = current;
+  }
+
+  /* ---------- MOVIMIENTOS (pendiente) ---------- */
+  function renderMovements(){}
+
+  /* ---------- VENTAS ---------- */
+  function updateSaleAmount(){
+    const productId = document.getElementById('sProduct').value;
+    const product = products.find(p => p.id === productId);
+    const qty = Number(document.getElementById('sQty').value) || 1;
+    if(product){ document.getElementById('sAmount').value = (product.precio * qty).toFixed(2); }
+  }
+
+  document.getElementById('saleBarcode').addEventListener('keydown', (e) => {
+    if(e.key !== 'Enter') return;
+    e.preventDefault();
+    const code = e.target.value.trim();
+    e.target.value = '';
+    if(!code) return;
+    const product = products.find(p => p.codigo_barras === code || p.codigo_rapido === code);
+    if(!product){ alert('No encontré ningún producto con ese código: ' + code); return; }
+    document.getElementById('sProduct').value = product.id;
+    document.getElementById('sQty').value = 1;
+    updateSaleAmount();
+  });
+
+  const NUMBER_WORDS = {uno:1,una:1,dos:2,tres:3,cuatro:4,cinco:5,seis:6,siete:7,ocho:8,nueve:9,diez:10};
+
+  function startVoiceSale(){
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if(!SR){ alert('Tu navegador no soporta dictado por voz. Probá con Chrome o Edge.'); return; }
+    const rec = new SR();
+    rec.lang = 'es-AR';
+    rec.interimResults = false;
+    rec.maxAlternatives = 1;
+    const btn = document.getElementById('voiceBtn');
+    btn.textContent = '🎙️ Escuchando…';
+    rec.onresult = (e) => { applyVoiceToSale(e.results[0][0].transcript); };
+    rec.onerror = (e) => { alert('No entendí bien, probá de nuevo. (' + e.error + ')'); };
+    rec.onend = () => { btn.textContent = '🎤 Dictar venta'; };
+    rec.start();
+  }
+
+  function applyVoiceToSale(text){
+    const lower = text.toLowerCase();
+    let qty = 1;
+    const digitMatch = lower.match(/\b(\d+)\b/);
+    if(digitMatch){ qty = parseInt(digitMatch[1]); }
+    else {
+      for(const word in NUMBER_WORDS){ if(lower.includes(word)){ qty = NUMBER_WORDS[word]; break; } }
+    }
+    const cleaned = lower.replace(/\b\d+\b/g,'').replace(/\b(un|una|uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez)\b/g,'').trim();
+
+    let best = null, bestScore = 0;
+    products.forEach(p => {
+      const pname = p.nombre.toLowerCase();
+      let score = 0;
+      if(pname.includes(cleaned) || (cleaned && cleaned.includes(pname))) score = 100;
+      else {
+        cleaned.split(/\s+/).filter(Boolean).forEach(w => { if(pname.includes(w)) score += 10; });
+      }
+      if(score > bestScore){ bestScore = score; best = p; }
+    });
+
+    if(!best || bestScore === 0){
+      alert('Escuché: "' + text + '" pero no encontré un producto parecido. Elegilo manualmente.');
+      return;
+    }
+
+    document.getElementById('sProduct').value = best.id;
+    document.getElementById('sQty').value = qty;
+    updateSaleAmount();
+  }
+
+  async function addSale(){
+    const productId = document.getElementById('sProduct').value || null;
+    const product = productId ? products.find(p => p.id === productId) : null;
+    const qty = Number(document.getElementById('sQty').value) > 0 ? Number(document.getElementById('sQty').value) : 1;
+    const amount = Number(document.getElementById('sAmount').value) || 0;
+    if(amount <= 0){ alert('Cargá el monto de la venta.'); return; }
+    const pay = document.getElementById('sPay').value || 'efectivo';
+    const client = document.getElementById('sClient').value.trim() || null;
+    const attendant = document.getElementById('sAttendant').value || null;
+
+    if(product){
+      if(qty > product.stock){
+        if(!confirm('La venta supera el stock disponible (' + product.stock + '). ¿Registrar igualmente?')) return;
+      }
+      const { error: stockError } = await supabaseClient.from('productos').update({ stock: product.stock - qty }).eq('id', product.id);
+      if(stockError){ alert('No se pudo actualizar el stock:\n' + stockError.message); return; }
+    }
+
+    const { error } = await supabaseClient.from('ventas').insert({
+      producto_id: product ? product.id : null,
+      producto_nombre: product ? product.nombre : 'Venta libre',
+      cantidad: qty, monto: amount, metodo_pago: pay, cliente: client, atendio: attendant
+    }).select().single();
+
+    if(error){ alert('No se pudo registrar la venta:\n' + error.message); return; }
+
+    document.getElementById('sProduct').value = '';
+    document.getElementById('sQty').value = 1;
+    document.getElementById('sAmount').value = '';
+    document.getElementById('sClient').value = '';
+    document.getElementById('saleBarcode').focus();
+    await loadAll();
+  }
+
+  function renderSales(){
+    const el = document.getElementById('salesTable');
+    const filter = document.getElementById('salesFilterPay').value;
+    const list = filter ? sales.filter(s => s.metodo_pago === filter) : sales;
+    if(list.length === 0){ el.innerHTML = '<p class="empty">Sin ventas registradas.</p>'; return; }
+
+    let html = '<table><tr><th>Fecha</th><th>Producto</th><th>Cant.</th><th>Monto</th><th>Pago</th><th>Cliente</th><th>Atendió</th></tr>';
+    list.slice(0,150).forEach(s => {
+      const fecha = s.creada_en ? new Date(s.creada_en).toLocaleString('es-AR', { timeZone:'America/Argentina/Buenos_Aires' }) : '—';
+      html += `<tr>
+        <td>${fecha}</td>
+        <td>${s.producto_nombre || 'Venta libre'}</td>
+        <td>${s.cantidad || 1}</td>
+        <td>${money(s.monto)}</td>
+        <td><span class="tag ${s.metodo_pago==='mercadopago'?'mp':'ef'}">${s.metodo_pago==='mercadopago'?'Mercado Pago':'Efectivo'}</span></td>
+        <td>${s.cliente || '—'}</td>
+        <td>${s.atendio || '—'}</td>
+      </tr>`;
+    });
+    html += '</table>';
+    el.innerHTML = html;
+  }
+
+  /* ---------- GRAFICOS ---------- */
+  function renderKpis(){
+    const totalVentas = sales.reduce((a,s)=>a+Number(s.monto),0);
+    const hoy = new Date().toLocaleDateString('es-AR', {timeZone:'America/Argentina/Buenos_Aires'});
+    const ventasHoy = sales.filter(s => s.creada_en && new Date(s.creada_en).toLocaleDateString('es-AR',{timeZone:'America/Argentina/Buenos_Aires'}) === hoy).reduce((a,s)=>a+Number(s.monto),0);
+    const lowStock = products.filter(p => p.stock <= p.stock_minimo).length;
+    document.getElementById('kpiRow').innerHTML = `
+      <div class="kpi"><span>Ventas totales registradas</span><strong>${money(totalVentas)}</strong></div>
+      <div class="kpi"><span>Ventas de hoy</span><strong>${money(ventasHoy)}</strong></div>
+      <div class="kpi"><span>Cantidad de ventas</span><strong>${sales.length}</strong></div>
+      <div class="kpi"><span>Productos con stock bajo</span><strong class="${lowStock>0?'low':''}">${lowStock}</strong></div>
+    `;
+  }
+
+  function destroyChart(key){ if(charts[key]){ charts[key].destroy(); delete charts[key]; } }
+
+  function renderCharts(){
+    const days = [];
+    const now = new Date();
+    for(let i=29;i>=0;i--){ const d = new Date(now); d.setDate(now.getDate()-i); days.push(d.toLocaleDateString('es-AR', {timeZone:'America/Argentina/Buenos_Aires'})); }
+    const dailyTotals = days.map(day => sales.filter(s=>s.creada_en && new Date(s.creada_en).toLocaleDateString('es-AR',{timeZone:'America/Argentina/Buenos_Aires'})===day).reduce((a,s)=>a+Number(s.monto),0));
+    destroyChart('daily');
+    charts.daily = new Chart(document.getElementById('chartDaily'), {
+      type:'bar', data:{ labels: days.map(d=>d.slice(0,5)), datasets:[{ label:'Ventas ($)', data:dailyTotals, backgroundColor:'#E4572E' }] },
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}} }
+    });
+
+    const efectivo = sales.filter(s=>s.metodo_pago==='efectivo').reduce((a,s)=>a+Number(s.monto),0);
+    const mp = sales.filter(s=>s.metodo_pago==='mercadopago').reduce((a,s)=>a+Number(s.monto),0);
+    destroyChart('payment');
+    charts.payment = new Chart(document.getElementById('chartPayment'), {
+      type:'doughnut', data:{ labels:['Efectivo','Mercado Pago'], datasets:[{ data:[efectivo, mp], backgroundColor:['#F2A93B','#185FA5'] }] },
+      options:{ responsive:true, maintainAspectRatio:false }
+    });
+
+    const attendants = ['Vos','Mamá','Papá'];
+    const attTotals = attendants.map(a => sales.filter(s=>s.atendio===a).reduce((acc,s)=>acc+Number(s.monto),0));
+    destroyChart('attendant');
+    charts.attendant = new Chart(document.getElementById('chartAttendant'), {
+      type:'bar', data:{ labels:attendants, datasets:[{ label:'Ventas ($)', data:attTotals, backgroundColor:'#0D2B29' }] },
+      options:{ responsive:true, maintainAspectRatio:false, indexAxis:'y', plugins:{legend:{display:false}} }
+    });
+
+    const qtyByProduct = {};
+    sales.forEach(s => { if(s.producto_nombre){ qtyByProduct[s.producto_nombre] = (qtyByProduct[s.producto_nombre]||0) + Number(s.cantidad||1); } });
+    const topEntries = Object.entries(qtyByProduct).sort((a,b)=>b[1]-a[1]).slice(0,8);
+    destroyChart('top');
+    charts.top = new Chart(document.getElementById('chartTopProducts'), {
+      type:'bar', data:{ labels: topEntries.map(e=>e[0]), datasets:[{ label:'Unidades vendidas', data: topEntries.map(e=>e[1]), backgroundColor:'#8A5A0F' }] },
+      options:{ responsive:true, maintainAspectRatio:false, indexAxis:'y', plugins:{legend:{display:false}} }
+    });
+  }
+
+  function renderAll(){
+    renderProducts();
+    refreshProductSelects();
+    renderMovements();
+    renderSales();
+    renderKpis();
+    renderCharts();
+  }
+
+  /* ---------- NAV ---------- */
+  document.querySelectorAll('nav button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('panel-' + btn.dataset.panel).classList.add('active');
+      if(btn.dataset.panel === 'graficos'){ renderKpis(); renderCharts(); }
+      if(btn.dataset.panel === 'ventas'){ document.getElementById('saleBarcode').focus(); }
+    });
+  });
+
+  /* ---------- TIEMPO REAL (multi-dispositivo) ---------- */
+  supabaseClient
+    .channel('public-db-changes')
+    .on('postgres_changes', { event:'*', schema:'public', table:'productos' }, () => { loadAll(); })
+    .on('postgres_changes', { event:'*', schema:'public', table:'ventas' }, () => { loadAll(); })
+    .subscribe();
+
+  loadAll();
+</script>
+
+</body>
+</html>
