@@ -124,7 +124,20 @@
   <section class="panel" id="panel-movimientos">
     <div class="card">
       <h2>Registrar entrada o salida</h2>
-      <p class="empty">Esta sección todavía no está conectada a la base de datos — la conectamos en el próximo paso, por ahora se enfocamos en productos y ventas.</p>
+      <div class="row">
+        <div><label>Producto</label><select id="mProduct"></select></div>
+        <div><label>Tipo</label>
+          <select id="mType"><option value="entrada">Entrada (compra/reposición)</option><option value="salida">Salida (ajuste, rotura, consumo)</option></select>
+        </div>
+        <div><label>Cantidad</label><input id="mQty" type="number" min="1" value="1"></div>
+        <div><label>Motivo (opcional)</label><input id="mNote" placeholder="Reposición proveedor, rotura, etc."></div>
+      </div>
+      <div style="margin-top:12px;"><button class="btn" onclick="addMovement()">Registrar movimiento</button></div>
+    </div>
+
+    <div class="card">
+      <h2>Historial de movimientos</h2>
+      <div id="movementsTable"><p class="empty">Cargando…</p></div>
     </div>
   </section>
 
@@ -179,6 +192,8 @@
     <div class="card">
       <h2>Ventas por día (últimos 30 días)</h2>
       <div class="chart-wrap"><canvas id="chartDaily"></canvas></div>
+      <h2 style="margin-top:20px;font-size:14px;">Detalle de los últimos 14 días</h2>
+      <div id="dailyDetailTable"><p class="empty">Cargando…</p></div>
     </div>
 
     <div class="row">
@@ -232,7 +247,15 @@
       sales = [];
     }
 
-    movements = [];
+    try {
+      const { data, error } = await supabaseClient.from('movimientos').select('*').order('creado_en', { ascending: false });
+      if(error) throw error;
+      movements = data || [];
+    } catch(error){
+      console.error('Error cargando movimientos:', error);
+      movements = [];
+    }
+
     renderAll();
   }
 
@@ -352,6 +375,11 @@
   }
 
   function refreshProductSelects(){
+    const mSel = document.getElementById('mProduct');
+    const mCurrent = mSel.value;
+    mSel.innerHTML = products.map(p => `<option value="${p.id}">${p.nombre} (stock: ${p.stock})</option>`).join('');
+    if(mCurrent) mSel.value = mCurrent;
+
     const sel = document.getElementById('sProduct');
     const current = sel.value;
     sel.innerHTML = '<option value="">— Libre (sin descontar stock) —</option>' +
@@ -359,8 +387,45 @@
     if(current) sel.value = current;
   }
 
-  /* ---------- MOVIMIENTOS (pendiente) ---------- */
-  function renderMovements(){}
+  /* ---------- MOVIMIENTOS ---------- */
+  async function addMovement(){
+    const productId = document.getElementById('mProduct').value;
+    const product = products.find(p => p.id === productId);
+    if(!product){ alert('Cargá al menos un producto primero.'); return; }
+    const type = document.getElementById('mType').value;
+    const qty = Number(document.getElementById('mQty').value) || 0;
+    if(qty <= 0){ alert('La cantidad tiene que ser mayor a 0.'); return; }
+    const note = document.getElementById('mNote').value.trim() || null;
+
+    if(type === 'salida' && qty > product.stock){
+      if(!confirm('La salida es mayor al stock actual (' + product.stock + '). ¿Registrar igual?')) return;
+    }
+
+    const newStock = product.stock + (type === 'entrada' ? qty : -qty);
+    const { error: stockError } = await supabaseClient.from('productos').update({ stock: newStock }).eq('id', product.id);
+    if(stockError){ alert('No se pudo actualizar el stock:\n' + stockError.message); return; }
+
+    const { error } = await supabaseClient.from('movimientos').insert({
+      producto_id: product.id, producto_nombre: product.nombre, tipo: type, cantidad: qty, motivo: note
+    });
+    if(error){ alert('No se pudo registrar el movimiento:\n' + error.message); return; }
+
+    document.getElementById('mQty').value = 1;
+    document.getElementById('mNote').value = '';
+    await loadAll();
+  }
+
+  function renderMovements(){
+    const el = document.getElementById('movementsTable');
+    if(movements.length === 0){ el.innerHTML = '<p class="empty">Sin movimientos todavía.</p>'; return; }
+    let html = '<table><tr><th>Fecha</th><th>Producto</th><th>Tipo</th><th>Cantidad</th><th>Motivo</th></tr>';
+    movements.slice(0,100).forEach(m => {
+      const fecha = m.creado_en ? new Date(m.creado_en).toLocaleString('es-AR', { timeZone:'America/Argentina/Buenos_Aires' }) : '—';
+      html += `<tr><td>${fecha}</td><td>${m.producto_nombre || '—'}</td><td><span class="tag ${m.tipo}">${m.tipo}</span></td><td>${m.cantidad}</td><td>${m.motivo||'—'}</td></tr>`;
+    });
+    html += '</table>';
+    el.innerHTML = html;
+  }
 
   /* ---------- VENTAS ---------- */
   function updateSaleAmount(){
@@ -508,12 +573,39 @@
     const days = [];
     const now = new Date();
     for(let i=29;i>=0;i--){ const d = new Date(now); d.setDate(now.getDate()-i); days.push(d.toLocaleDateString('es-AR', {timeZone:'America/Argentina/Buenos_Aires'})); }
-    const dailyTotals = days.map(day => sales.filter(s=>s.creada_en && new Date(s.creada_en).toLocaleDateString('es-AR',{timeZone:'America/Argentina/Buenos_Aires'})===day).reduce((a,s)=>a+Number(s.monto),0));
+    const dayStats = days.map(day => {
+      const dayList = sales.filter(s => s.creada_en && new Date(s.creada_en).toLocaleDateString('es-AR',{timeZone:'America/Argentina/Buenos_Aires'}) === day);
+      const efectivo = dayList.filter(s=>s.metodo_pago==='efectivo').reduce((a,s)=>a+Number(s.monto),0);
+      const mp = dayList.filter(s=>s.metodo_pago==='mercadopago').reduce((a,s)=>a+Number(s.monto),0);
+      return { day, efectivo, mp, total: efectivo + mp, count: dayList.length };
+    });
     destroyChart('daily');
     charts.daily = new Chart(document.getElementById('chartDaily'), {
-      type:'bar', data:{ labels: days.map(d=>d.slice(0,5)), datasets:[{ label:'Ventas ($)', data:dailyTotals, backgroundColor:'#E4572E' }] },
-      options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}} }
+      type:'bar',
+      data:{
+        labels: days.map(d=>d.slice(0,5)),
+        datasets:[
+          { label:'Efectivo', data: dayStats.map(d=>d.efectivo), backgroundColor:'#F2A93B' },
+          { label:'Mercado Pago', data: dayStats.map(d=>d.mp), backgroundColor:'#185FA5' }
+        ]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{
+          legend:{ display:true, position:'bottom' },
+          tooltip:{
+            callbacks:{
+              footer: (items) => {
+                const total = items.reduce((a,i)=>a+i.parsed.y, 0);
+                return 'Total del día: ' + money(total);
+              }
+            }
+          }
+        },
+        scales:{ x:{ stacked:true }, y:{ stacked:true, beginAtZero:true } }
+      }
     });
+    renderDailyDetail(dayStats);
 
     const efectivo = sales.filter(s=>s.metodo_pago==='efectivo').reduce((a,s)=>a+Number(s.monto),0);
     const mp = sales.filter(s=>s.metodo_pago==='mercadopago').reduce((a,s)=>a+Number(s.monto),0);
@@ -539,6 +631,25 @@
       type:'bar', data:{ labels: topEntries.map(e=>e[0]), datasets:[{ label:'Unidades vendidas', data: topEntries.map(e=>e[1]), backgroundColor:'#8A5A0F' }] },
       options:{ responsive:true, maintainAspectRatio:false, indexAxis:'y', plugins:{legend:{display:false}} }
     });
+  }
+
+  function renderDailyDetail(dayStats){
+    const el = document.getElementById('dailyDetailTable');
+    const last14 = dayStats.slice(-14).reverse();
+    if(last14.every(d => d.count === 0)){ el.innerHTML = '<p class="empty">Sin ventas en este período.</p>'; return; }
+
+    let html = '<table><tr><th>Fecha</th><th>Ventas</th><th>Efectivo</th><th>Mercado Pago</th><th>Total del día</th></tr>';
+    last14.forEach(d => {
+      html += `<tr>
+        <td>${d.day}</td>
+        <td>${d.count}</td>
+        <td>${money(d.efectivo)}</td>
+        <td>${money(d.mp)}</td>
+        <td><strong>${money(d.total)}</strong></td>
+      </tr>`;
+    });
+    html += '</table>';
+    el.innerHTML = html;
   }
 
   function renderAll(){
@@ -567,6 +678,7 @@
     .channel('public-db-changes')
     .on('postgres_changes', { event:'*', schema:'public', table:'productos' }, () => { loadAll(); })
     .on('postgres_changes', { event:'*', schema:'public', table:'ventas' }, () => { loadAll(); })
+    .on('postgres_changes', { event:'*', schema:'public', table:'movimientos' }, () => { loadAll(); })
     .subscribe();
 
   loadAll();
