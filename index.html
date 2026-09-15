@@ -3,336 +3,788 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cooperativa Santa Ana — Cuerinas artificiales al por mayor, Gerli</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<title>Kiosco Uriel — Gestión interna</title>
+<link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
+<link rel="manifest" href="manifest-gestion.json">
+<meta name="theme-color" content="#0D2B29">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <style>
   :root{
-    --graphite:#241F1B; --graphite-2:#2E2721;
-    --parchment:#F1EAD9; --parchment-2:#E7DDC6;
-    --wine:#6E2A2E; --wine-deep:#471C1F;
-    --brass:#B08D57; --brass-deep:#7A5E37;
-    --ink:#211B16; --ink-soft:#5B5142;
-    --line: rgba(33,27,22,0.14); --line-light: rgba(241,234,217,0.16);
+    --night:#0D2B29; --night-2:#123834; --cream:#FBF6EC; --cream-2:#F3ECDC;
+    --amber:#F2A93B; --coral:#E4572E; --coral-deep:#7A2712;
+    --ink:#12201F; --ink-soft:#4B5D5A; --line:rgba(18,32,31,0.14);
+    --ok:#2E8B57; --bad:#C0392B;
   }
   *{box-sizing:border-box;}
-  body{margin:0;background:var(--parchment);color:var(--ink);font-family:'Inter',sans-serif;}
-  h1,h2,h3{font-family:'Space Grotesk',sans-serif;margin:0;letter-spacing:-0.01em;}
-  p{margin:0;}
-  .wrap{max-width:960px;margin:0 auto;padding:0 24px;}
-
-  .stitch{height:0;border-top:2px dashed var(--brass);opacity:0.5;}
-
-  .hero{
-    background:
-      linear-gradient(180deg, rgba(36,31,27,0.72), rgba(36,31,27,0.88)),
-      var(--graphite) url('images/portada.png') center/cover no-repeat;
-    color:var(--parchment);padding:58px 0 46px;
-  }
-  .badge{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--brass);border:1px solid var(--line-light);padding:6px 14px;border-radius:100px;}
-  .hero h1{font-size:44px;font-weight:700;margin-top:16px;color:var(--parchment);line-height:1.05;}
-  .hero-sub{margin-top:14px;font-size:16px;color:#D8CDBB;max-width:52ch;line-height:1.6;}
-  .hero-row{display:flex;flex-wrap:wrap;gap:14px;margin-top:26px;align-items:center;}
-  .btn{display:inline-flex;align-items:center;gap:10px;background:var(--wine);color:var(--parchment);font-weight:600;font-size:15px;padding:13px 22px;border-radius:8px;text-decoration:none;transition:background 0.15s ease, transform 0.15s ease;}
-  .btn:hover{background:#84343a;transform:translateY(-1px);}
-  .btn.outline{background:transparent;border:1px solid var(--line-light);color:var(--parchment);}
-  .meta-row{display:flex;flex-wrap:wrap;gap:26px;margin-top:30px;font-size:13px;color:#C7BBA6;}
-  .meta-row span{display:block;color:var(--parchment);font-weight:600;font-size:15px;margin-top:3px;}
-
-  .section{padding:50px 0;}
-  .section-head{margin-bottom:26px;max-width:60ch;}
-  .eyebrow{font-size:12px;letter-spacing:0.08em;text-transform:uppercase;font-weight:600;color:var(--wine-deep);}
-  .section-head h2{font-size:27px;font-weight:700;margin-top:8px;}
-  .section-head p{margin-top:8px;color:var(--ink-soft);font-size:15px;line-height:1.55;}
-
-  .swatch-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:16px;}
-  .swatch-card{background:white;border:1px solid var(--line);border-radius:12px;overflow:hidden;}
-  .swatch-img{
-  width:100%;
-  height:180px;
-  display:block;
-  object-fit:cover;
-  object-position:center;
-}
-  .swatch-body{padding:14px 16px;}
-  .swatch-body h3{font-size:15px;font-weight:600;}
-  .swatch-body p{font-size:13px;color:var(--ink-soft);margin-top:4px;}
-  .swatch-link{margin-top:10px;display:inline-flex;font-size:13px;font-weight:600;color:var(--wine-deep);text-decoration:none;}
-  .swatch-note{font-size:12px;color:var(--ink-soft);margin-top:22px;border-top:1px dashed var(--line);padding-top:14px;}
-
-  .uses-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;}
-  .use-card{background:var(--parchment-2);border:1px solid var(--line);border-radius:12px;padding:20px;}
-  .use-card h3{font-size:15px;font-weight:600;}
-  .use-card p{font-size:13px;color:var(--ink-soft);margin-top:6px;line-height:1.5;}
-
-  .info-strip{background:var(--graphite-2);color:var(--parchment);}
-  .info-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:24px;padding:42px 0;}
-  .info-item p{font-size:14px;margin-top:8px;color:#D8CDBB;line-height:1.55;}
-
-  .footer-cta{padding:54px 0;text-align:center;}
-  .footer-cta h2{font-size:25px;font-weight:700;max-width:28ch;margin:0 auto 18px;}
-  .footer-note{font-size:13px;color:var(--ink-soft);margin-top:20px;}
-  .social-row{display:flex;justify-content:center;gap:14px;margin-top:22px;flex-wrap:wrap;}
-  .social-link{display:inline-flex;align-items:center;gap:8px;background:white;border:1px solid var(--line);color:var(--ink);text-decoration:none;font-size:14px;font-weight:600;padding:10px 18px;border-radius:100px;transition:background 0.15s ease;}
-  .social-link:hover{background:var(--parchment-2);}
-
-  @media (max-width:600px){ .hero h1{font-size:32px;} .hero{padding:42px 0 36px;} }
+  body{margin:0;background:var(--cream);color:var(--ink);font-family:'Segoe UI',Roboto,sans-serif;}
+  header{background:var(--night);color:var(--cream);padding:20px 24px;}
+  header h1{margin:0;font-size:22px;}
+  header p{margin:4px 0 0;font-size:13px;color:#B9D2CE;}
+  nav{display:flex;gap:6px;background:var(--night-2);padding:0 20px;overflow-x:auto;}
+  nav button{background:none;border:none;color:#CFE3E0;padding:13px 16px;font-size:14px;cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap;}
+  nav button.active{color:var(--cream);border-bottom-color:var(--amber);font-weight:600;}
+  main{max-width:1080px;margin:0 auto;padding:22px 20px 60px;}
+  .panel{display:none;}
+  .panel.active{display:block;}
+  .card{background:white;border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:16px;}
+  .card h2{margin:0 0 14px;font-size:17px;}
+  .row{display:flex;flex-wrap:wrap;gap:10px;}
+  .row > *{flex:1;min-width:140px;}
+  label{font-size:12px;color:var(--ink-soft);display:block;margin-bottom:4px;}
+  input,select{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;font-size:14px;background:var(--cream-2);}
+  button.btn{background:var(--coral);color:white;border:none;padding:10px 18px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;}
+  button.btn:hover{background:#f0693f;}
+  button.btn.secondary{background:var(--night);}
+  button.btn.voice{background:var(--night);}
+  button.btn.ghost{background:transparent;color:var(--coral-deep);border:1px solid var(--line);padding:6px 10px;font-size:13px;margin-right:4px;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);}
+  th{color:var(--ink-soft);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:0.02em;}
+  .tag{display:inline-block;padding:2px 8px;border-radius:100px;font-size:11px;font-weight:600;}
+  .tag.entrada{background:#E1F0E5;color:var(--ok);}
+  .tag.salida{background:#F8E3E0;color:var(--bad);}
+  .tag.mp{background:#E6F1FB;color:#185FA5;}
+  .tag.ef{background:#FAEEDA;color:#854F0B;}
+  .low{color:var(--bad);font-weight:600;}
+  .missing{font-size:11px;color:var(--bad);}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px;}
+  .kpi{background:white;border:1px solid var(--line);border-radius:12px;padding:14px 16px;}
+  .kpi span{display:block;font-size:12px;color:var(--ink-soft);}
+  .kpi strong{display:block;font-size:22px;margin-top:4px;}
+  .chart-wrap{position:relative;height:280px;margin-top:6px;}
+  .empty{color:var(--ink-soft);font-size:13px;padding:10px 0;}
+  .filter-row{margin-bottom:14px;align-items:end;}
+  .checkbox-field{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-soft);padding-bottom:9px;}
+  .checkbox-field input{width:auto;}
+  select#salesFilterPay{max-width:220px;}
+  .scan-box{background:var(--cream-2);border:1px dashed var(--brass,var(--line));border-radius:10px;padding:14px;margin-bottom:14px;}
+  .edit-row td{background:var(--cream-2);}
+  .field-with-scan{display:flex;gap:6px;align-items:flex-end;}
+  .field-with-scan input{flex:1;}
+  .btn-scan{background:var(--night);color:white;border:none;border-radius:8px;padding:9px 12px;font-size:15px;cursor:pointer;flex:none;}
+  .btn-scan:hover{background:var(--night-2);}
+  #scannerModal{display:none;position:fixed;inset:0;background:rgba(18,32,31,0.82);z-index:999;align-items:center;justify-content:center;padding:20px;}
+  #scannerBox{background:white;border-radius:14px;padding:16px;max-width:420px;width:100%;}
+  #scannerBox h3{font-size:15px;margin-bottom:10px;}
+  #scannerReader{width:100%;border-radius:10px;overflow:hidden;}
+  #scannerBox p{font-size:12px;color:var(--ink-soft);margin-top:8px;}
 </style>
 </head>
 <body>
 
-<header class="hero">
-  <div class="wrap">
-    <span class="badge">Cooperativa textil · Gerli</span>
-    <h1>Cooperativa Santa Ana</h1>
-    <p class="hero-sub">Cuerinas artificiales al por mayor para tapicería, indumentaria, calzado y marroquinería. Muestras a pedido y despacho a todo el país.</p>
-    <div class="hero-row">
-      <a class="btn" id="heroOrder" href="#" target="_blank" rel="noopener">Consultar por WhatsApp →</a>
-      <a class="btn outline" href="#catalogo">Ver catálogo</a>
-    </div>
-    <div class="meta-row">
-      <div>Ubicación<span>Gerli, Buenos Aires</span></div>
-      <div>Contacto<span>+54 11 3080-1864</span></div>
-      <div>Venta<span>Por rollo y por metro</span></div>
-    </div>
-  </div>
+<header>
+  <h1>Kiosco Uriel — Gestión interna</h1>
+  <p>Stock, movimientos, ventas y gráficos. Uso interno del local.</p>
 </header>
-<div class="stitch"></div>
 
-<section class="section" id="catalogo">
-  <div class="wrap">
-    <div class="section-head">
-      <p class="eyebrow">Catálogo</p>
-      <h2>Colores y terminaciones disponibles</h2>
-      <p>Esta es una muestra de ejemplo del catálogo — la vamos a reemplazar por fotos reales de los rollos y terminaciones apenas las tengamos.</p>
-    </div>
-    <div class="swatch-grid" id="swatchGrid"></div>
-    <p class="swatch-note">¿No encontrás el color o la terminación que buscás? Escribinos y te confirmamos stock y muestras disponibles.</p>
-  </div>
-</section>
+<nav>
+  <button data-panel="productos" class="active">Productos</button>
+  <button data-panel="movimientos">Entradas / Salidas</button>
+  <button data-panel="ventas">Ventas</button>
+  <button data-panel="graficos">Gráficos</button>
+</nav>
 
-<section class="section" style="background:var(--parchment-2);">
-  <div class="wrap">
-    <div class="section-head">
-      <p class="eyebrow">Aplicaciones</p>
-      <h2>Para qué la usan nuestros clientes</h2>
-    </div>
-    <div class="uses-grid">
-      <div class="use-card"><h3>Tapicería de muebles</h3><p>Sillones, sillas y respaldos para mueblerías y tapiceros.</p></div>
-      <div class="use-card"><h3>Indumentaria</h3><p>Camperas, accesorios y detalles en prendas.</p></div>
-      <div class="use-card"><h3>Calzado y marroquinería</h3><p>Carteras, cinturones, mochilas y calzado.</p></div>
-      <div class="use-card"><h3>Tapicería vehicular</h3><p>Butacas y detalles interiores para autos y motos.</p></div>
-    </div>
-  </div>
-</section>
+<main>
 
-<section class="section" style="background:var(--parchment-2);">
-  <div class="wrap">
-    <div class="section-head">
-      <p class="eyebrow">Galería</p>
-      <h2>Trabajos de nuestros clientes</h2>
-      <p>Así quedan los trabajos hechos con nuestras cuerinas. Si nos comprás, mandanos una foto de tu trabajo terminado y la sumamos acá.</p>
-    </div>
-
-    <!--
-      GALERÍA DE FOTOS REALES:
-      1. En tu repositorio de GitHub creá una carpeta llamada "images".
-      2. Subí ahí tus fotos (ej: rollo1.jpg, taller1.jpg, muestras1.jpg).
-      3. Reemplazá cada src="images/..." de abajo por el nombre real del archivo que subiste.
-    -->
-    <div class="swatch-grid" style="margin-bottom:24px;">
-       <img src="images/rollo1.jpeg" alt="Trabajo realizado con cuerinas Santa Ana" style="width:100%;height:180px;object-fit:cover;border-radius:12px;border:1px solid var(--line);">
-       <img src="images/rollo2.jpeg" alt="Trabajo realizado con cuerinas Santa Ana" style="width:100%;height:180px;object-fit:cover;border-radius:12px;border:1px solid var(--line);">
-       <img src="images/rollo3.jpeg" alt="Trabajo realizado con cuerinas Santa Ana" style="width:100%;height:180px;object-fit:cover;border-radius:12px;border:1px solid var(--line);">
-      <img src="images/rollo4.jpeg" alt="Trabajo realizado con cuerinas Santa Ana" style="width:100%;height:180px;object-fit:cover;border-radius:12px;border:1px solid var(--line);">
-      <img src="images/rollo5.jpeg" alt="Trabajo realizado con cuerinas Santa Ana" style="width:100%;height:180px;object-fit:cover;border-radius:12px;border:1px solid var(--line);">
-      <img src="images/rollo (1).jpeg" alt="Trabajo realizado con cuerinas Santa Ana" style="width:100%;height:180px;object-fit:cover;border-radius:12px;border:1px solid var(--line);">
-<img src="images/rollo (2).jpeg" alt="Trabajo realizado con cuerinas Santa Ana" style="width:100%;height:180px;object-fit:cover;border-radius:12px;border:1px solid var(--line);">
-<img src="images/rollo (3).jpeg" alt="Trabajo realizado con cuerinas Santa Ana" style="width:100%;height:180px;object-fit:cover;border-radius:12px;border:1px solid var(--line);">
-<img src="images/rollo (4).jpeg" alt="Trabajo realizado con cuerinas Santa Ana" style="width:100%;height:180px;object-fit:cover;border-radius:12px;border:1px solid var(--line);">
-<img src="images/rollo (5).jpeg" alt="Trabajo realizado con cuerinas Santa Ana" style="width:100%;height:180px;object-fit:cover;border-radius:12px;border:1px solid var(--line);">
-<img src="images/rollo (6).jpeg" alt="Trabajo realizado con cuerinas Santa Ana" style="width:100%;height:180px;object-fit:cover;border-radius:12px;border:1px solid var(--line);">
-<img src="images/rollo (7).jpeg" alt="Trabajo realizado con cuerinas Santa Ana" style="width:100%;height:180px;object-fit:cover;border-radius:12px;border:1px solid var(--line);">
-<img src="images/rollo (8).jpeg" alt="Trabajo realizado con cuerinas Santa Ana" style="width:100%;height:180px;object-fit:cover;border-radius:12px;border:1px solid var(--line);">
-<img src="images/rollo (9).jpeg" alt="Trabajo realizado con cuerinas Santa Ana" style="width:100%;height:180px;object-fit:cover;border-radius:12px;border:1px solid var(--line);">
-<img src="images/rollo (10).jpeg" alt="Trabajo realizado con cuerinas Santa Ana" style="width:100%;height:180px;object-fit:cover;border-radius:12px;border:1px solid var(--line);">
-<img src="images/rollo (11).jpeg" alt="Trabajo realizado con cuerinas Santa Ana" style="width:100%;height:180px;object-fit:cover;border-radius:12px;border:1px solid var(--line);">
-<img src="images/rollo (12).jpeg" alt="Trabajo realizado con cuerinas Santa Ana" style="width:100%;height:180px;object-fit:cover;border-radius:12px;border:1px solid var(--line);">
-<img src="images/rollo (13).jpeg" alt="Trabajo realizado con cuerinas Santa Ana" style="width:100%;height:180px;object-fit:cover;border-radius:12px;border:1px solid var(--line);">
-<img src="images/rollo (14).jpeg" alt="Trabajo realizado con cuerinas Santa Ana" style="width:100%;height:180px;object-fit:cover;border-radius:12px;border:1px solid var(--line);">
-<img src="images/rollo (15).jpeg" alt="Trabajo realizado con cuerinas Santa Ana" style="width:100%;height:180px;object-fit:cover;border-radius:12px;border:1px solid var(--line);">
-<img src="images/rollo (16).jpeg" alt="Trabajo realizado con cuerinas Santa Ana" style="width:100%;height:180px;object-fit:cover;border-radius:12px;border:1px solid var(--line);">
-<img src="images/rollo (17).jpeg" alt="Trabajo realizado con cuerinas Santa Ana" style="width:100%;height:180px;object-fit:cover;border-radius:12px;border:1px solid var(--line);">
-<img src="images/rollo (18).jpeg" alt="Trabajo realizado con cuerinas Santa Ana" style="width:100%;height:180px;object-fit:cover;border-radius:12px;border:1px solid var(--line);">
-<img src="images/rollo (19).jpeg" alt="Trabajo realizado con cuerinas Santa Ana" style="width:100%;height:180px;object-fit:cover;border-radius:12px;border:1px solid var(--line);">
-<img src="images/rollo (20).jpeg" alt="Trabajo realizado con cuerinas Santa Ana" style="width:100%;height:180px;object-fit:cover;border-radius:12px;border:1px solid var(--line);">
-<img src="images/rollo (21).jpeg" alt="Trabajo realizado con cuerinas Santa Ana" style="width:100%;height:180px;object-fit:cover;border-radius:12px;border:1px solid var(--line);">
-<img src="images/rollo (22).jpeg" alt="Trabajo realizado con cuerinas Santa Ana" style="width:100%;height:180px;object-fit:cover;border-radius:12px;border:1px solid var(--line);">
-<img src="images/rollo (23).jpeg" alt="Trabajo realizado con cuerinas Santa Ana" style="width:100%;height:180px;object-fit:cover;border-radius:12px;border:1px solid var(--line);">
-<img src="images/rollo (24).jpeg" alt="Trabajo realizado con cuerinas Santa Ana" style="width:100%;height:180px;object-fit:cover;border-radius:12px;border:1px solid var(--line);">
-<img src="images/rollo (25).jpeg" alt="Trabajo realizado con cuerinas Santa Ana" style="width:100%;height:180px;object-fit:cover;border-radius:12px;border:1px solid var(--line);">
-<img src="images/rollo (26).jpeg" alt="Trabajo realizado con cuerinas Santa Ana" style="width:100%;height:180px;object-fit:cover;border-radius:12px;border:1px solid var(--line);">
-<img src="images/rollo (27).jpeg" alt="Trabajo realizado con cuerinas Santa Ana" style="width:100%;height:180px;object-fit:cover;border-radius:12px;border:1px solid var(--line);">
-<img src="images/rollo (28).jpeg" alt="Trabajo realizado con cuerinas Santa Ana" style="width:100%;height:180px;object-fit:cover;border-radius:12px;border:1px solid var(--line);">
-<img src="images/rollo (29).jpeg" alt="Trabajo realizado con cuerinas Santa Ana" style="width:100%;height:180px;object-fit:cover;border-radius:12px;border:1px solid var(--line);">
-<img src="images/rollo (30).jpeg" alt="Trabajo realizado con cuerinas Santa Ana" style="width:100%;height:180px;object-fit:cover;border-radius:12px;border:1px solid var(--line);">
-<img src="images/rollo (31).jpeg" alt="Trabajo realizado con cuerinas Santa Ana" style="width:100%;height:180px;object-fit:cover;border-radius:12px;border:1px solid var(--line);">
-<img src="images/rollo (32).jpeg" alt="Trabajo realizado con cuerinas Santa Ana" style="width:100%;height:180px;object-fit:cover;border-radius:12px;border:1px solid var(--line);">
-<img src="images/rollo (33).jpeg" alt="Trabajo realizado con cuerinas Santa Ana" style="width:100%;height:180px;object-fit:cover;border-radius:12px;border:1px solid var(--line);">
-<img src="images/rollo (34).jpeg" alt="Trabajo realizado con cuerinas Santa Ana" style="width:100%;height:180px;object-fit:cover;border-radius:12px;border:1px solid var(--line);">
-<img src="images/rollo (35).jpeg" alt="Trabajo realizado con cuerinas Santa Ana" style="width:100%;height:180px;object-fit:cover;border-radius:12px;border:1px solid var(--line);">
-<img src="images/rollo (36).jpeg" alt="Trabajo realizado con cuerinas Santa Ana" style="width:100%;height:180px;object-fit:cover;border-radius:12px;border:1px solid var(--line);">
-<img src="images/rollo (37).jpeg" alt="Trabajo realizado con cuerinas Santa Ana" style="width:100%;height:180px;object-fit:cover;border-radius:12px;border:1px solid var(--line);">
-<img src="images/rollo (38).jpeg" alt="Trabajo realizado con cuerinas Santa Ana" style="width:100%;height:180px;object-fit:cover;border-radius:12px;border:1px solid var(--line);">
-<img src="images/rollo (39).jpeg" alt="Trabajo realizado con cuerinas Santa Ana" style="width:100%;height:180px;object-fit:cover;border-radius:12px;border:1px solid var(--line);">
-<img src="images/rollo (40).jpeg" alt="Trabajo realizado con cuerinas Santa Ana" style="width:100%;height:180px;object-fit:cover;border-radius:12px;border:1px solid var(--line);">
-<img src="images/rollo (41).jpeg" alt="Trabajo realizado con cuerinas Santa Ana" style="width:100%;height:180px;object-fit:cover;border-radius:12px;border:1px solid var(--line);">
-<img src="images/rollo (42).jpeg" alt="Trabajo realizado con cuerinas Santa Ana" style="width:100%;height:180px;object-fit:cover;border-radius:12px;border:1px solid var(--line);">
-<img src="images/rollo (43).jpeg" alt="Trabajo realizado con cuerinas Santa Ana" style="width:100%;height:180px;object-fit:cover;border-radius:12px;border:1px solid var(--line);">
-<img src="images/rollo (44).jpeg" alt="Trabajo realizado con cuerinas Santa Ana" style="width:100%;height:180px;object-fit:cover;border-radius:12px;border:1px solid var(--line);">
-<img src="images/rollo (45).jpeg" alt="Trabajo realizado con cuerinas Santa Ana" style="width:100%;height:180px;object-fit:cover;border-radius:12px;border:1px solid var(--line);">
-<img src="images/rollo (46).jpeg" alt="Trabajo realizado con cuerinas Santa Ana" style="width:100%;height:180px;object-fit:cover;border-radius:12px;border:1px solid var(--line);">
-<img src="images/rollo (47).jpeg" alt="Trabajo realizado con cuerinas Santa Ana" style="width:100%;height:180px;object-fit:cover;border-radius:12px;border:1px solid var(--line);">
-<img src="images/rollo (48).jpeg" alt="Trabajo realizado con cuerinas Santa Ana" style="width:100%;height:180px;object-fit:cover;border-radius:12px;border:1px solid var(--line);">
-<img src="images/rollo (49).jpeg" alt="Trabajo realizado con cuerinas Santa Ana" style="width:100%;height:180px;object-fit:cover;border-radius:12px;border:1px solid var(--line);">
+  <!-- PRODUCTOS -->
+  <section class="panel active" id="panel-productos">
+    <div class="card">
+      <h2>Nuevo producto</h2>
+      <div class="row">
+        <div><label>Nombre</label><input id="pName" placeholder="Coca-Cola 500ml"></div>
+        <div><label>Categoría</label>
+          <select id="pCat">
+            <option>Bebidas</option><option>Almacén</option><option>Panadería</option>
+            <option>Cigarrillos</option><option>Golosinas y snacks</option><option>Otros</option>
+          </select>
+        </div>
+        <div>
+          <label>Código de barras</label>
+          <div class="field-with-scan">
+            <input id="pBarcode" placeholder="7791234567890">
+            <button type="button" class="btn-scan" onclick="openScanner('pBarcode')" title="Escanear con cámara">📷</button>
+          </div>
+        </div>
+        <div><label>Código rápido</label><input id="pQuickCode" placeholder="COCA500"></div>
+        <div><label>Stock inicial</label><input id="pStock" type="number" min="0" value="0"></div>
+        <div><label>Stock mínimo</label><input id="pMin" type="number" min="0" value="3"></div>
+        <div><label>Costo de compra</label><input id="pCost" type="number" min="0" step="0.01" placeholder="0.00"></div>
+        <div><label>Precio de venta</label><input id="pPrice" type="number" min="0" step="0.01" placeholder="0.00"></div>
+      </div>
+      <div style="margin-top:12px;"><button class="btn" onclick="addProduct()">Agregar producto</button></div>
     </div>
 
-    <!--
-      VIDEO:
-      1. Subí tu video a YouTube (podés dejarlo como "No listado" para que no aparezca en búsquedas, y solo se vea acá).
-      2. Copiá el ID del video (la parte final de la URL, después de "v=").
-      3. Reemplazá TU_ID_DE_VIDEO de abajo por ese ID.
-    -->
-    <div style="position:relative;padding-bottom:56.25%;height:0;border-radius:12px;overflow:hidden;border:1px solid var(--line);">
-      <iframe src="https://www.youtube.com/embed/bzwCPBbQ5xo" style="position:absolute;top:0;left:0;width:100%;height:100%;" frameborder="0" allowfullscreen></iframe>
+    <div class="card">
+      <h2>Catálogo</h2>
+      <div class="filter-row row">
+        <div>
+          <label>Filtrar por categoría</label>
+          <select id="productFilterCat" onchange="renderProducts()">
+            <option value="">Todas</option>
+            <option>Bebidas</option><option>Almacén</option><option>Panadería</option>
+            <option>Cigarrillos</option><option>Golosinas y snacks</option><option>Otros</option>
+          </select>
+        </div>
+        <div class="checkbox-field">
+          <input type="checkbox" id="productFilterNoCode" onchange="renderProducts()">
+          <label style="margin:0;">Solo sin código</label>
+        </div>
+      </div>
+      <div id="productsTable"><p class="empty">Cargando…</p></div>
     </div>
-  </div>
-</section>
+  </section>
 
-<section class="section">
-  <div class="wrap">
-    <div class="section-head">
-      <p class="eyebrow">Visitanos</p>
-      <h2>Encontranos en Google Maps</h2>
-      <p>Si ya nos compraste, no dudes en enviarnos fotos de tu trabajo tambien nos ayuda muchísimo que dejes tu reseña — es lo que hace que más gente nos encuentre.</p>
+  <!-- MOVIMIENTOS -->
+  <section class="panel" id="panel-movimientos">
+    <div class="card">
+      <h2>Registrar entrada o salida</h2>
+      <div class="row">
+        <div><label>Producto</label><select id="mProduct"></select></div>
+        <div><label>Tipo</label>
+          <select id="mType"><option value="entrada">Entrada (compra/reposición)</option><option value="salida">Salida (ajuste, rotura, consumo)</option></select>
+        </div>
+        <div><label>Cantidad</label><input id="mQty" type="number" min="1" value="1"></div>
+        <div><label>Motivo (opcional)</label><input id="mNote" placeholder="Reposición proveedor, rotura, etc."></div>
+      </div>
+      <div style="margin-top:12px;"><button class="btn" onclick="addMovement()">Registrar movimiento</button></div>
     </div>
 
-    <!--
-      MAPA Y RESEÑAS:
-      1. Una vez que tengas tu ficha de Google Business Profile activa, andá a Google Maps, buscá tu negocio,
-         tocá "Compartir" y copiá el link — reemplazá GOOGLE_MAPS_LINK por ese link.
-      2. Desde el mismo "Compartir" también podés elegir "Insertar un mapa" para tener el iframe embebido (opcional).
-      3. Para el link de reseñas: en Google Business Profile hay una opción "Pedir reseñas" que genera un link corto
-         que lleva directo al cuadro de reseña — reemplazá GOOGLE_REVIEW_LINK por ese.
-    -->
-    <div class="hero-row" style="margin-top:6px;">
-      <a class="btn" href="https://maps.app.goo.gl/t6sXha1ZQ8YZZySSA" target="_blank" rel="noopener">Ver en Google Maps →</a>
-      <a class="btn outline" style="color:var(--wine-deep);border-color:var(--wine-deep);" href="https://g.page/r/CcJ0OWFquBIwEBI/review" target="_blank" rel="noopener">Dejanos tu reseña ⭐</a>
+    <div class="card">
+      <h2>Historial de movimientos</h2>
+      <div id="movementsTable"><p class="empty">Cargando…</p></div>
     </div>
-  </div>
-</section>
+  </section>
 
-<div class="info-strip">
-  <div class="wrap">
-    <div class="info-grid">
-      <div class="info-item"><p class="eyebrow" style="color:var(--brass);">Cómo comprar</p><p>Pedís por WhatsApp indicando color, ancho de rollo y metraje. Te confirmamos stock, precio mayorista y tiempo de entrega.</p></div>
-      <div class="info-item"><p class="eyebrow" style="color:var(--brass);">Muestras</p><p>Podemos enviar muestras físicas antes de una compra grande para que verifiques color y textura.</p></div>
-      <div class="info-item"><p class="eyebrow" style="color:var(--brass);">Envíos</p><p>Despachamos a todo el país. Consultá el costo y tiempo según tu localidad.</p></div>
+  <!-- VENTAS -->
+  <section class="panel" id="panel-ventas">
+    <div class="card">
+      <h2>Registrar venta</h2>
+
+      <div class="scan-box">
+        <label>Escanear o tipear código (lector de código de barras) + Enter</label>
+        <div class="field-with-scan">
+          <input id="saleBarcode" placeholder="Esperando escaneo…" autocomplete="off">
+          <button type="button" class="btn-scan" onclick="openScanner('saleBarcode')" title="Escanear con cámara">📷</button>
+        </div>
+      </div>
+
+      <div class="row">
+        <div><label>Producto</label><select id="sProduct" onchange="updateSaleAmount()"><option value="">— Libre (sin descontar stock) —</option></select></div>
+        <div><label>Cantidad</label><input id="sQty" type="number" min="1" value="1" oninput="updateSaleAmount()"></div>
+        <div><label>Monto total</label><input id="sAmount" type="number" min="0" step="0.01" placeholder="0.00"></div>
+        <div><label>Método de pago</label>
+          <select id="sPay"><option value="efectivo">Efectivo</option><option value="mercadopago">Mercado Pago</option></select>
+        </div>
+      </div>
+      <div class="row" style="margin-top:10px;">
+        <div><label>Cliente (opcional)</label><input id="sClient" placeholder="Nombre o 'ocasional'"></div>
+        <div><label>Atendió</label>
+          <select id="sAttendant"><option>Vos</option><option>Mamá</option><option>Papá</option></select>
+        </div>
+      </div>
+      <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn" onclick="addSale()">Registrar venta</button>
+        <button class="btn voice" id="voiceBtn" onclick="startVoiceSale()">🎤 Dictar venta</button>
+      </div>
+      <p class="empty" style="margin-top:8px;">Dictado por voz: funciona en Chrome/Edge. Decí algo como "dos coca colas" y completa producto y cantidad — revisá antes de registrar.</p>
+    </div>
+
+    <div class="card">
+      <h2>Ventas registradas</h2>
+      <div class="filter-row row">
+        <div><label>Filtrar por método de pago</label>
+          <select id="salesFilterPay" onchange="renderSales()">
+            <option value="">Todos</option><option value="efectivo">Efectivo</option><option value="mercadopago">Mercado Pago</option>
+          </select>
+        </div>
+      </div>
+      <div id="salesTable"><p class="empty">Cargando…</p></div>
+    </div>
+  </section>
+
+  <!-- GRAFICOS -->
+  <section class="panel" id="panel-graficos">
+    <div class="kpis" id="kpiRow"></div>
+
+    <div class="card">
+      <h2>Ventas por día (últimos 30 días)</h2>
+      <div class="chart-wrap"><canvas id="chartDaily"></canvas></div>
+      <h2 style="margin-top:20px;font-size:14px;">Detalle de los últimos 14 días</h2>
+      <div id="dailyDetailTable"><p class="empty">Cargando…</p></div>
+    </div>
+
+    <div class="row">
+      <div class="card" style="flex:1;">
+        <h2>Ventas por método de pago</h2>
+        <div class="chart-wrap"><canvas id="chartPayment"></canvas></div>
+      </div>
+      <div class="card" style="flex:1;">
+        <h2>Ventas por quién atendió</h2>
+        <div class="chart-wrap"><canvas id="chartAttendant"></canvas></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Productos más vendidos (por cantidad)</h2>
+      <div class="chart-wrap"><canvas id="chartTopProducts"></canvas></div>
+    </div>
+  </section>
+
+</main>
+
+<div id="scannerModal">
+  <div id="scannerBox">
+    <h3>Escaneando código de barras…</h3>
+    <div id="scannerReader"></div>
+    <p>Apuntá la cámara al código de barras. Se completa solo apenas lo detecta.</p>
+    <div style="margin-top:10px;text-align:right;">
+      <button class="btn ghost" onclick="closeScanner()">Cancelar</button>
     </div>
   </div>
 </div>
 
-<section class="footer-cta">
-  <div class="wrap">
-    <h2>Contanos qué estás buscando y te asesoramos</h2>
-    <a class="btn" id="footerOrder" href="#" target="_blank" rel="noopener">Escribir por WhatsApp →</a>
-
-    <!--
-      REDES SOCIALES:
-      Reemplazá cada href="#" por el link real de cada red. Si todavía no tenés alguna,
-      podés borrar directamente esa línea <a> hasta que la crees.
-    -->
-    <div class="social-row">
-      <a class="social-link" href="#" target="_blank" rel="noopener">📷 Instagram</a>
-      <a class="social-link" href="#" target="_blank" rel="noopener">📘 Facebook</a>
-      <a class="social-link" href="https://wa.me/541130801864" target="_blank" rel="noopener">💬 WhatsApp</a>
-    </div>
-
-    <p class="footer-note">Cooperativa Santa Ana · Gerli, Buenos Aires · Venta mayorista de cuerinas artificiales</p>
-  </div>
-</section>
-
 <script>
-  const PHONE = "541130801864";
-  const swatches = [
-  {
-    name: "Angus",
-    desc: "Textura relativamente fina y discreta. Muy versátil: asientos, interiores y muebles.",
-    image: "images/angus.webp"
-  },
-  {
-    name: "Balcana",
-    desc: "Grabado más marcado. Ideal para tapicería general y automotor.",
-    image: "images/balcana.webp"
-  },
-  {
-    name: "Antideslizante",
-    desc: "Superficie con textura pensada para aumentar el agarre.",
-    image: "images/antideslizante.jpg"
-  },
-  {
-    name: "Bizon",
-    desc: "Apariencia tipo cuero, granulada, pensada para dar un aspecto más natural.",
-    image: "images/bison.webp"
-  },
-  {
-    name: "Nate",
-    desc: "Tramado/textura comercial. La terminación puede variar según el lote disponible.",
-    image: "images/nate.webp"
-  },
-    {
-    name: "Grabados",
-    desc: "Trabajamos con grabados. Consultanos y te asesoramos.",
-    image: "images/grabados.webp"
-  }
-    
-];
+  const SUPABASE_URL = 'https://gzgqivfmuqhwwiyeduqj.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_WBO9vc_meB6RfMiS97VIfQ_uiKzUHSY';
+  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-  const grid = document.getElementById("swatchGrid");
-  swatches.forEach(s => {
-    const card = document.createElement("div");
-    card.className = "swatch-card";
-    const text = "Hola! Vi el catálogo de Cooperativa Santa Ana y quiero consultar por el grabado " + s.name + ".";
-    const link = "https://wa.me/" + PHONE + "?text=" + encodeURIComponent(text);
-    card.innerHTML =
-      card.innerHTML =
-  '<img class="swatch-img" src="' + s.image + '" alt="Cuerina grabado ' + s.name + '">' +
-      '<div class="swatch-body">' +
-        '<h3>' + s.name + '</h3>' +
-        '<p>' + s.desc + '</p>' +
-        '<a class="swatch-link" href="' + link + '" target="_blank" rel="noopener">Consultar este grabado →</a>' +
-      '</div>';
-    grid.appendChild(card);
+  const CATS = ['Bebidas','Almacén','Panadería','Cigarrillos','Golosinas y snacks','Otros'];
+
+  let products = [];
+  let movements = [];
+  let sales = [];
+  let charts = {};
+  let editingProductId = null;
+
+  async function loadAll(){
+    try {
+      const { data, error } = await supabaseClient.from('productos').select('*').order('creado_en', { ascending: false });
+      if(error) throw error;
+      products = data || [];
+    } catch(error){
+      console.error('Error cargando productos:', error);
+      products = [];
+    }
+
+    try {
+      const { data, error } = await supabaseClient.from('ventas').select('*').order('creada_en', { ascending: false });
+      if(error) throw error;
+      sales = data || [];
+    } catch(error){
+      console.error('Error cargando ventas:', error);
+      sales = [];
+    }
+
+    try {
+      const { data, error } = await supabaseClient.from('movimientos').select('*').order('creado_en', { ascending: false });
+      if(error) throw error;
+      movements = data || [];
+    } catch(error){
+      console.error('Error cargando movimientos:', error);
+      movements = [];
+    }
+
+    renderAll();
+  }
+
+  function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+  function money(n){ return '$' + Number(n||0).toLocaleString('es-AR',{minimumFractionDigits:2, maximumFractionDigits:2}); }
+  function catOptions(selected){
+    return CATS.map(c => `<option ${c===selected?'selected':''}>${c}</option>`).join('');
+  }
+
+  /* ---------- PRODUCTOS ---------- */
+  async function addProduct(){
+    const name = document.getElementById('pName').value.trim();
+    if(!name){ alert('Poné un nombre de producto.'); return; }
+    const cat = document.getElementById('pCat').value;
+    const barcode = document.getElementById('pBarcode').value.trim() || null;
+    const quickCode = document.getElementById('pQuickCode').value.trim() || null;
+    const stock = Number(document.getElementById('pStock').value) || 0;
+    const min = Number(document.getElementById('pMin').value) || 0;
+    const cost = Number(document.getElementById('pCost').value) || 0;
+    const price = Number(document.getElementById('pPrice').value) || 0;
+
+    const { data, error } = await supabaseClient.from('productos').insert({
+      nombre: name, categoria: cat, codigo_barras: barcode, codigo_rapido: quickCode,
+      stock: stock, stock_minimo: min, costo: cost, precio: price
+    }).select().single();
+
+    if(error){ alert('No se pudo agregar el producto:\n' + error.message); return; }
+
+    document.getElementById('pName').value = '';
+    document.getElementById('pBarcode').value = '';
+    document.getElementById('pQuickCode').value = '';
+    document.getElementById('pStock').value = 0;
+    document.getElementById('pCost').value = '';
+    document.getElementById('pPrice').value = '';
+    await loadAll();
+  }
+
+  async function deleteProduct(id){
+    if(!confirm('¿Eliminar este producto del catálogo?')) return;
+    const { error } = await supabaseClient.from('productos').delete().eq('id', id);
+    if(error){ alert('No se pudo eliminar el producto:\n' + error.message); return; }
+    await loadAll();
+  }
+
+  function editProduct(id){ editingProductId = id; renderProducts(); }
+  function cancelEdit(){ editingProductId = null; renderProducts(); }
+
+  async function saveProductEdit(id){
+    const nombre = document.getElementById('edit-nombre-'+id).value.trim();
+    const categoria = document.getElementById('edit-categoria-'+id).value;
+    const codigo_barras = document.getElementById('edit-barras-'+id).value.trim() || null;
+    const codigo_rapido = document.getElementById('edit-rapido-'+id).value.trim() || null;
+    const stock = Number(document.getElementById('edit-stock-'+id).value) || 0;
+    const stock_minimo = Number(document.getElementById('edit-min-'+id).value) || 0;
+    const costo = Number(document.getElementById('edit-costo-'+id).value) || 0;
+    const precio = Number(document.getElementById('edit-precio-'+id).value) || 0;
+
+    const { error } = await supabaseClient.from('productos').update({
+      nombre, categoria, codigo_barras, codigo_rapido, stock, stock_minimo, costo, precio
+    }).eq('id', id);
+
+    if(error){ alert('No se pudo guardar:\n' + error.message); return; }
+    editingProductId = null;
+    await loadAll();
+  }
+
+  function renderProducts(){
+    const el = document.getElementById('productsTable');
+    const catFilter = document.getElementById('productFilterCat').value;
+    const noCodeOnly = document.getElementById('productFilterNoCode').checked;
+
+    let list = products;
+    if(catFilter) list = list.filter(p => p.categoria === catFilter);
+    if(noCodeOnly) list = list.filter(p => !p.codigo_barras && !p.codigo_rapido);
+
+    if(list.length === 0){ el.innerHTML = '<p class="empty">No hay productos que coincidan con el filtro.</p>'; return; }
+
+    let html = '<table><tr><th>Producto</th><th>Categoría</th><th>Stock</th><th>Mínimo</th><th>Costo</th><th>Precio</th><th>Margen</th><th></th></tr>';
+
+    list.forEach(p => {
+      if(p.id === editingProductId){
+        html += `<tr class="edit-row">
+          <td><input id="edit-nombre-${p.id}" value="${p.nombre}"></td>
+          <td><select id="edit-categoria-${p.id}">${catOptions(p.categoria)}</select></td>
+          <td><input id="edit-stock-${p.id}" type="number" value="${p.stock}"></td>
+          <td><input id="edit-min-${p.id}" type="number" value="${p.stock_minimo}"></td>
+          <td><input id="edit-costo-${p.id}" type="number" step="0.01" value="${p.costo||0}"></td>
+          <td><input id="edit-precio-${p.id}" type="number" step="0.01" value="${p.precio}"></td>
+          <td>—</td>
+          <td>
+            <button class="btn ghost" onclick="saveProductEdit('${p.id}')">Guardar</button>
+            <button class="btn ghost" onclick="cancelEdit()">Cancelar</button>
+          </td>
+        </tr>
+        <tr class="edit-row">
+          <td colspan="8">
+            <div class="row" style="margin-top:0;">
+              <div><label style="font-size:11px;">Código de barras</label>
+                <div class="field-with-scan">
+                  <input id="edit-barras-${p.id}" value="${p.codigo_barras||''}">
+                  <button type="button" class="btn-scan" onclick="openScanner('edit-barras-${p.id}')" title="Escanear con cámara">📷</button>
+                </div>
+              </div>
+              <div><label style="font-size:11px;">Código rápido</label><input id="edit-rapido-${p.id}" value="${p.codigo_rapido||''}"></div>
+            </div>
+          </td>
+        </tr>`;
+      } else {
+        const low = p.stock <= p.stock_minimo;
+        const missing = !p.codigo_barras && !p.codigo_rapido;
+        const margen = Number(p.precio||0) - Number(p.costo||0);
+        const margenPct = p.precio ? (margen / p.precio * 100) : 0;
+        html += `<tr>
+          <td>${p.nombre}${missing ? ' <span class="missing">(sin código)</span>' : ''}</td>
+          <td>${p.categoria || '—'}</td>
+          <td class="${low?'low':''}">${p.stock}${low?' ⚠':''}</td>
+          <td>${p.stock_minimo}</td>
+          <td>${money(p.costo||0)}</td>
+          <td>${money(p.precio)}</td>
+          <td>${money(margen)} <span style="color:var(--ink-soft);font-size:11px;">(${margenPct.toFixed(0)}%)</span></td>
+          <td>
+            <button class="btn ghost" onclick="editProduct('${p.id}')">Editar</button>
+            <button class="btn ghost" onclick="deleteProduct('${p.id}')">Eliminar</button>
+          </td>
+        </tr>`;
+      }
+    });
+
+    html += '</table>';
+    el.innerHTML = html;
+  }
+
+  function refreshProductSelects(){
+    const mSel = document.getElementById('mProduct');
+    const mCurrent = mSel.value;
+    mSel.innerHTML = products.map(p => `<option value="${p.id}">${p.nombre} (stock: ${p.stock})</option>`).join('');
+    if(mCurrent) mSel.value = mCurrent;
+
+    const sel = document.getElementById('sProduct');
+    const current = sel.value;
+    sel.innerHTML = '<option value="">— Libre (sin descontar stock) —</option>' +
+      products.map(p => `<option value="${p.id}">${p.nombre} — ${money(p.precio)} (stock: ${p.stock})</option>`).join('');
+    if(current) sel.value = current;
+  }
+
+  /* ---------- MOVIMIENTOS ---------- */
+  async function addMovement(){
+    const productId = document.getElementById('mProduct').value;
+    const product = products.find(p => p.id === productId);
+    if(!product){ alert('Cargá al menos un producto primero.'); return; }
+    const type = document.getElementById('mType').value;
+    const qty = Number(document.getElementById('mQty').value) || 0;
+    if(qty <= 0){ alert('La cantidad tiene que ser mayor a 0.'); return; }
+    const note = document.getElementById('mNote').value.trim() || null;
+
+    if(type === 'salida' && qty > product.stock){
+      if(!confirm('La salida es mayor al stock actual (' + product.stock + '). ¿Registrar igual?')) return;
+    }
+
+    const newStock = product.stock + (type === 'entrada' ? qty : -qty);
+    const { error: stockError } = await supabaseClient.from('productos').update({ stock: newStock }).eq('id', product.id);
+    if(stockError){ alert('No se pudo actualizar el stock:\n' + stockError.message); return; }
+
+    const { error } = await supabaseClient.from('movimientos').insert({
+      producto_id: product.id, producto_nombre: product.nombre, tipo: type, cantidad: qty, motivo: note
+    });
+    if(error){ alert('No se pudo registrar el movimiento:\n' + error.message); return; }
+
+    document.getElementById('mQty').value = 1;
+    document.getElementById('mNote').value = '';
+    await loadAll();
+  }
+
+  function renderMovements(){
+    const el = document.getElementById('movementsTable');
+    if(movements.length === 0){ el.innerHTML = '<p class="empty">Sin movimientos todavía.</p>'; return; }
+    let html = '<table><tr><th>Fecha</th><th>Producto</th><th>Tipo</th><th>Cantidad</th><th>Motivo</th></tr>';
+    movements.slice(0,100).forEach(m => {
+      const fecha = m.creado_en ? new Date(m.creado_en).toLocaleString('es-AR', { timeZone:'America/Argentina/Buenos_Aires' }) : '—';
+      html += `<tr><td>${fecha}</td><td>${m.producto_nombre || '—'}</td><td><span class="tag ${m.tipo}">${m.tipo}</span></td><td>${m.cantidad}</td><td>${m.motivo||'—'}</td></tr>`;
+    });
+    html += '</table>';
+    el.innerHTML = html;
+  }
+
+  /* ---------- VENTAS ---------- */
+  function updateSaleAmount(){
+    const productId = document.getElementById('sProduct').value;
+    const product = products.find(p => p.id === productId);
+    const qty = Number(document.getElementById('sQty').value) || 1;
+    if(product){ document.getElementById('sAmount').value = (product.precio * qty).toFixed(2); }
+  }
+
+  function processSaleBarcode(code){
+    if(!code) return;
+    const product = products.find(p => p.codigo_barras === code || p.codigo_rapido === code);
+    if(!product){ alert('No encontré ningún producto con ese código: ' + code); return; }
+    document.getElementById('sProduct').value = product.id;
+    document.getElementById('sQty').value = 1;
+    updateSaleAmount();
+  }
+
+  document.getElementById('saleBarcode').addEventListener('keydown', (e) => {
+    if(e.key !== 'Enter') return;
+    e.preventDefault();
+    const code = e.target.value.trim();
+    e.target.value = '';
+    processSaleBarcode(code);
   });
 
-  // Tarjeta para consultar por grabados que no están listados en el catálogo
-  const otherCard = document.createElement("div");
-  otherCard.className = "swatch-card";
-  const otherText = "Hola! Estoy buscando un grabado de cuerina que no vi en el catálogo, ¿me pueden asesorar?";
-  const otherLink = "https://wa.me/" + PHONE + "?text=" + encodeURIComponent(otherText);
-  otherCard.innerHTML =
-    '<div class="swatch-img" style="background:repeating-linear-gradient(45deg, var(--parchment-2) 0 10px, var(--line) 10px 11px);"></div>' +
-    '<div class="swatch-body">' +
-      '<h3>¿Buscás otro grabado?</h3>' +
-      '<p>Trabajamos con más opciones además de las que ves acá. Consultanos y te asesoramos.</p>' +
-      '<a class="swatch-link" href="' + otherLink + '" target="_blank" rel="noopener">Consultar otras opciones →</a>' +
-    '</div>';
-  grid.appendChild(otherCard);
+  /* ---------- ESCANEO POR CÁMARA ---------- */
+  let html5QrCode = null;
+  let scannerTarget = null;
 
-  const generalLink = "https://wa.me/" + PHONE + "?text=" + encodeURIComponent("Hola! Quiero consultar por cuerinas artificiales de Cooperativa Santa Ana.");
-  document.getElementById("heroOrder").href = generalLink;
-  document.getElementById("footerOrder").href = generalLink;
+  function openScanner(targetId){
+    scannerTarget = targetId;
+    document.getElementById('scannerModal').style.display = 'flex';
+    html5QrCode = new Html5Qrcode("scannerReader");
+    html5QrCode.start(
+      { facingMode: "environment" },
+      { fps: 10, qrbox: { width: 260, height: 140 } },
+      (decodedText) => { onScanSuccess(decodedText); },
+      () => { /* se ignoran los frames sin lectura */ }
+    ).catch((err) => {
+      alert('No se pudo acceder a la cámara: ' + err);
+      closeScanner();
+    });
+  }
+
+  function onScanSuccess(code){
+    const targetId = scannerTarget;
+    closeScanner();
+    if(targetId === 'saleBarcode'){
+      processSaleBarcode(code);
+    } else {
+      const input = document.getElementById(targetId);
+      if(input) input.value = code;
+    }
+  }
+
+  function closeScanner(){
+    document.getElementById('scannerModal').style.display = 'none';
+    if(html5QrCode){
+      html5QrCode.stop().then(() => html5QrCode.clear()).catch(() => {});
+      html5QrCode = null;
+    }
+  }
+
+  const NUMBER_WORDS = {uno:1,una:1,dos:2,tres:3,cuatro:4,cinco:5,seis:6,siete:7,ocho:8,nueve:9,diez:10};
+
+  function startVoiceSale(){
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if(!SR){ alert('Tu navegador no soporta dictado por voz. Probá con Chrome o Edge.'); return; }
+    const rec = new SR();
+    rec.lang = 'es-AR';
+    rec.interimResults = false;
+    rec.maxAlternatives = 1;
+    const btn = document.getElementById('voiceBtn');
+    btn.textContent = '🎙️ Escuchando…';
+    rec.onresult = (e) => { applyVoiceToSale(e.results[0][0].transcript); };
+    rec.onerror = (e) => { alert('No entendí bien, probá de nuevo. (' + e.error + ')'); };
+    rec.onend = () => { btn.textContent = '🎤 Dictar venta'; };
+    rec.start();
+  }
+
+  function applyVoiceToSale(text){
+    const lower = text.toLowerCase();
+    let qty = 1;
+    const digitMatch = lower.match(/\b(\d+)\b/);
+    if(digitMatch){ qty = parseInt(digitMatch[1]); }
+    else {
+      for(const word in NUMBER_WORDS){ if(lower.includes(word)){ qty = NUMBER_WORDS[word]; break; } }
+    }
+    const cleaned = lower.replace(/\b\d+\b/g,'').replace(/\b(un|una|uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez)\b/g,'').trim();
+
+    let best = null, bestScore = 0;
+    products.forEach(p => {
+      const pname = p.nombre.toLowerCase();
+      let score = 0;
+      if(pname.includes(cleaned) || (cleaned && cleaned.includes(pname))) score = 100;
+      else {
+        cleaned.split(/\s+/).filter(Boolean).forEach(w => { if(pname.includes(w)) score += 10; });
+      }
+      if(score > bestScore){ bestScore = score; best = p; }
+    });
+
+    if(!best || bestScore === 0){
+      alert('Escuché: "' + text + '" pero no encontré un producto parecido. Elegilo manualmente.');
+      return;
+    }
+
+    document.getElementById('sProduct').value = best.id;
+    document.getElementById('sQty').value = qty;
+    updateSaleAmount();
+  }
+
+  async function addSale(){
+    const productId = document.getElementById('sProduct').value || null;
+    const product = productId ? products.find(p => p.id === productId) : null;
+    const qty = Number(document.getElementById('sQty').value) > 0 ? Number(document.getElementById('sQty').value) : 1;
+    const amount = Number(document.getElementById('sAmount').value) || 0;
+    if(amount <= 0){ alert('Cargá el monto de la venta.'); return; }
+    const pay = document.getElementById('sPay').value || 'efectivo';
+    const client = document.getElementById('sClient').value.trim() || null;
+    const attendant = document.getElementById('sAttendant').value || null;
+
+    if(product){
+      if(qty > product.stock){
+        if(!confirm('La venta supera el stock disponible (' + product.stock + '). ¿Registrar igualmente?')) return;
+      }
+      const { error: stockError } = await supabaseClient.from('productos').update({ stock: product.stock - qty }).eq('id', product.id);
+      if(stockError){ alert('No se pudo actualizar el stock:\n' + stockError.message); return; }
+    }
+
+    const { error } = await supabaseClient.from('ventas').insert({
+      producto_id: product ? product.id : null,
+      producto_nombre: product ? product.nombre : 'Venta libre',
+      cantidad: qty, monto: amount, metodo_pago: pay, cliente: client, atendio: attendant,
+      costo_unitario: product ? (product.costo || 0) : null
+    }).select().single();
+
+    if(error){ alert('No se pudo registrar la venta:\n' + error.message); return; }
+
+    document.getElementById('sProduct').value = '';
+    document.getElementById('sQty').value = 1;
+    document.getElementById('sAmount').value = '';
+    document.getElementById('sClient').value = '';
+    document.getElementById('saleBarcode').focus();
+    await loadAll();
+  }
+
+  function renderSales(){
+    const el = document.getElementById('salesTable');
+    const filter = document.getElementById('salesFilterPay').value;
+    const list = filter ? sales.filter(s => s.metodo_pago === filter) : sales;
+    if(list.length === 0){ el.innerHTML = '<p class="empty">Sin ventas registradas.</p>'; return; }
+
+    let html = '<table><tr><th>Fecha</th><th>Producto</th><th>Cant.</th><th>Monto</th><th>Pago</th><th>Cliente</th><th>Atendió</th></tr>';
+    list.slice(0,150).forEach(s => {
+      const fecha = s.creada_en ? new Date(s.creada_en).toLocaleString('es-AR', { timeZone:'America/Argentina/Buenos_Aires' }) : '—';
+      html += `<tr>
+        <td>${fecha}</td>
+        <td>${s.producto_nombre || 'Venta libre'}</td>
+        <td>${s.cantidad || 1}</td>
+        <td>${money(s.monto)}</td>
+        <td><span class="tag ${s.metodo_pago==='mercadopago'?'mp':'ef'}">${s.metodo_pago==='mercadopago'?'Mercado Pago':'Efectivo'}</span></td>
+        <td>${s.cliente || '—'}</td>
+        <td>${s.atendio || '—'}</td>
+      </tr>`;
+    });
+    html += '</table>';
+    el.innerHTML = html;
+  }
+
+  /* ---------- GRAFICOS ---------- */
+  function renderKpis(){
+    const totalVentas = sales.reduce((a,s)=>a+Number(s.monto),0);
+    const hoy = new Date().toLocaleDateString('es-AR', {timeZone:'America/Argentina/Buenos_Aires'});
+    const ventasHoy = sales.filter(s => s.creada_en && new Date(s.creada_en).toLocaleDateString('es-AR',{timeZone:'America/Argentina/Buenos_Aires'}) === hoy).reduce((a,s)=>a+Number(s.monto),0);
+    const lowStock = products.filter(p => p.stock <= p.stock_minimo).length;
+
+    const conCosto = sales.filter(s => s.costo_unitario !== null && s.costo_unitario !== undefined);
+    const invertido = conCosto.reduce((a,s)=>a + Number(s.costo_unitario)*Number(s.cantidad||1), 0);
+    const ventasConCostoMonto = conCosto.reduce((a,s)=>a+Number(s.monto),0);
+    const ganancia = ventasConCostoMonto - invertido;
+    const margenPct = ventasConCostoMonto ? (ganancia/ventasConCostoMonto*100) : 0;
+
+    document.getElementById('kpiRow').innerHTML = `
+      <div class="kpi"><span>Ventas totales registradas</span><strong>${money(totalVentas)}</strong></div>
+      <div class="kpi"><span>Ventas de hoy</span><strong>${money(ventasHoy)}</strong></div>
+      <div class="kpi"><span>Cantidad de ventas</span><strong>${sales.length}</strong></div>
+      <div class="kpi"><span>Productos con stock bajo</span><strong class="${lowStock>0?'low':''}">${lowStock}</strong></div>
+      <div class="kpi"><span>Ganancia estimada</span><strong>${money(ganancia)}</strong></div>
+      <div class="kpi"><span>Invertido (costo vendido)</span><strong>${money(invertido)}</strong></div>
+      <div class="kpi"><span>Margen promedio</span><strong>${margenPct.toFixed(1)}%</strong></div>
+    `;
+  }
+
+  function destroyChart(key){ if(charts[key]){ charts[key].destroy(); delete charts[key]; } }
+
+  function renderCharts(){
+    const days = [];
+    const now = new Date();
+    for(let i=29;i>=0;i--){ const d = new Date(now); d.setDate(now.getDate()-i); days.push(d.toLocaleDateString('es-AR', {timeZone:'America/Argentina/Buenos_Aires'})); }
+    const dayStats = days.map(day => {
+      const dayList = sales.filter(s => s.creada_en && new Date(s.creada_en).toLocaleDateString('es-AR',{timeZone:'America/Argentina/Buenos_Aires'}) === day);
+      const efectivo = dayList.filter(s=>s.metodo_pago==='efectivo').reduce((a,s)=>a+Number(s.monto),0);
+      const mp = dayList.filter(s=>s.metodo_pago==='mercadopago').reduce((a,s)=>a+Number(s.monto),0);
+      const costo = dayList.reduce((a,s)=> a + (s.costo_unitario!=null ? Number(s.costo_unitario)*Number(s.cantidad||1) : 0), 0);
+      const ganancia = dayList.reduce((a,s)=> a + (s.costo_unitario!=null ? (Number(s.monto) - Number(s.costo_unitario)*Number(s.cantidad||1)) : 0), 0);
+      return { day, efectivo, mp, total: efectivo + mp, count: dayList.length, costo, ganancia };
+    });
+    destroyChart('daily');
+    charts.daily = new Chart(document.getElementById('chartDaily'), {
+      type:'bar',
+      data:{
+        labels: days.map(d=>d.slice(0,5)),
+        datasets:[
+          { label:'Efectivo', data: dayStats.map(d=>d.efectivo), backgroundColor:'#F2A93B' },
+          { label:'Mercado Pago', data: dayStats.map(d=>d.mp), backgroundColor:'#185FA5' }
+        ]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{
+          legend:{ display:true, position:'bottom' },
+          tooltip:{
+            callbacks:{
+              footer: (items) => {
+                const total = items.reduce((a,i)=>a+i.parsed.y, 0);
+                return 'Total del día: ' + money(total);
+              }
+            }
+          }
+        },
+        scales:{ x:{ stacked:true }, y:{ stacked:true, beginAtZero:true } }
+      }
+    });
+    renderDailyDetail(dayStats);
+
+    const efectivo = sales.filter(s=>s.metodo_pago==='efectivo').reduce((a,s)=>a+Number(s.monto),0);
+    const mp = sales.filter(s=>s.metodo_pago==='mercadopago').reduce((a,s)=>a+Number(s.monto),0);
+    destroyChart('payment');
+    charts.payment = new Chart(document.getElementById('chartPayment'), {
+      type:'doughnut', data:{ labels:['Efectivo','Mercado Pago'], datasets:[{ data:[efectivo, mp], backgroundColor:['#F2A93B','#185FA5'] }] },
+      options:{ responsive:true, maintainAspectRatio:false }
+    });
+
+    const attendants = ['Vos','Mamá','Papá'];
+    const attTotals = attendants.map(a => sales.filter(s=>s.atendio===a).reduce((acc,s)=>acc+Number(s.monto),0));
+    destroyChart('attendant');
+    charts.attendant = new Chart(document.getElementById('chartAttendant'), {
+      type:'bar', data:{ labels:attendants, datasets:[{ label:'Ventas ($)', data:attTotals, backgroundColor:'#0D2B29' }] },
+      options:{ responsive:true, maintainAspectRatio:false, indexAxis:'y', plugins:{legend:{display:false}} }
+    });
+
+    const qtyByProduct = {};
+    sales.forEach(s => { if(s.producto_nombre){ qtyByProduct[s.producto_nombre] = (qtyByProduct[s.producto_nombre]||0) + Number(s.cantidad||1); } });
+    const topEntries = Object.entries(qtyByProduct).sort((a,b)=>b[1]-a[1]).slice(0,8);
+    destroyChart('top');
+    charts.top = new Chart(document.getElementById('chartTopProducts'), {
+      type:'bar', data:{ labels: topEntries.map(e=>e[0]), datasets:[{ label:'Unidades vendidas', data: topEntries.map(e=>e[1]), backgroundColor:'#8A5A0F' }] },
+      options:{ responsive:true, maintainAspectRatio:false, indexAxis:'y', plugins:{legend:{display:false}} }
+    });
+  }
+
+  function renderDailyDetail(dayStats){
+    const el = document.getElementById('dailyDetailTable');
+    const last14 = dayStats.slice(-14).reverse();
+    if(last14.every(d => d.count === 0)){ el.innerHTML = '<p class="empty">Sin ventas en este período.</p>'; return; }
+
+    let html = '<table><tr><th>Fecha</th><th>Ventas</th><th>Efectivo</th><th>Mercado Pago</th><th>Total del día</th><th>Costo</th><th>Ganancia</th></tr>';
+    last14.forEach(d => {
+      html += `<tr>
+        <td>${d.day}</td>
+        <td>${d.count}</td>
+        <td>${money(d.efectivo)}</td>
+        <td>${money(d.mp)}</td>
+        <td><strong>${money(d.total)}</strong></td>
+        <td>${money(d.costo)}</td>
+        <td><strong>${money(d.ganancia)}</strong></td>
+      </tr>`;
+    });
+    html += '</table>';
+    el.innerHTML = html;
+  }
+
+  function renderAll(){
+    renderProducts();
+    refreshProductSelects();
+    renderMovements();
+    renderSales();
+    renderKpis();
+    renderCharts();
+  }
+
+  /* ---------- NAV ---------- */
+  document.querySelectorAll('nav button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      closeScanner();
+      document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('panel-' + btn.dataset.panel).classList.add('active');
+      if(btn.dataset.panel === 'graficos'){ renderKpis(); renderCharts(); }
+      if(btn.dataset.panel === 'ventas'){ document.getElementById('saleBarcode').focus(); }
+    });
+  });
+
+  /* ---------- TIEMPO REAL (multi-dispositivo) ---------- */
+  supabaseClient
+    .channel('public-db-changes')
+    .on('postgres_changes', { event:'*', schema:'public', table:'productos' }, () => { loadAll(); })
+    .on('postgres_changes', { event:'*', schema:'public', table:'ventas' }, () => { loadAll(); })
+    .on('postgres_changes', { event:'*', schema:'public', table:'movimientos' }, () => { loadAll(); })
+    .subscribe();
+
+  loadAll();
 </script>
 
 </body>
